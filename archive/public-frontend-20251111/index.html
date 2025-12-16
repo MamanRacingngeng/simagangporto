@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Magang Digital BBKB - Dashboard</title>
+  <script>
+    (function(){
+      // Minimal on-page logger to surface JS errors and module load issues
+      function safeLog(msg){
+        try{console.log(msg);}catch(e){}
+        try{
+          var el=document.getElementById('debug-logs');
+          if(!el){
+            el=document.createElement('div');
+            el.id='debug-logs';
+            el.style.position='fixed';
+            el.style.right='12px';
+            el.style.top='12px';
+            el.style.maxWidth='45%';
+            el.style.maxHeight='40%';
+            el.style.overflow='auto';
+            el.style.background='rgba(0,0,0,0.75)';
+            el.style.color='#fff';
+            el.style.fontSize='12px';
+            el.style.padding='8px';
+            el.style.zIndex=9999999;
+            el.style.borderRadius='6px';
+            el.style.boxShadow='0 4px 14px rgba(0,0,0,0.2)';
+            el.style.fontFamily='Segoe UI, Roboto, Arial, sans-serif';
+            (document.body||document.documentElement).appendChild(el);
+          }
+          var p=document.createElement('div');
+          p.textContent=(new Date()).toLocaleTimeString()+" - "+msg;
+          p.style.marginBottom='6px';
+          el.appendChild(p);
+        }catch(e){}
+      }
+
+      safeLog('debug: inline logger initialized');
+
+      window.addEventListener('error', function(ev){
+        var m=ev&&ev.message?ev.message:String(ev);
+        var src=(ev&&ev.filename)?(' @ '+ev.filename+':'+ev.lineno+':'+ev.colno):'';
+        safeLog('ERROR: '+m+src);
+      });
+
+      window.addEventListener('unhandledrejection', function(ev){
+        try{var r=ev.reason; safeLog('UNHANDLEDREJECTION: '+(r&&r.stack?r.stack:JSON.stringify(r)))}catch(e){safeLog('UNHANDLEDREJECTION');}
+      });
+
+      document.addEventListener('DOMContentLoaded', function(){
+        safeLog('DOMContentLoaded');
+        var s=document.querySelector('script[type="module"][src]');
+        if(s){
+          try{s.addEventListener('load', function(){ safeLog('module script load event fired: '+s.src); });}catch(e){}
+          try{s.addEventListener('error', function(ev){ safeLog('module script error event: '+(ev&&ev.message?ev.message:JSON.stringify(ev))); });}catch(e){}
+          safeLog('found module script: '+(s.src||s.getAttribute('src')));
+        } else safeLog('module script not found on page');
+
+        setTimeout(function(){
+          var root=document.getElementById('root');
+          safeLog('#root exists: '+(!!root));
+          safeLog('#root innerHTML length: '+(root?root.innerHTML.length:'no-root'));
+        },1200);
+      });
+    })();
+  </script>
+  <script type="module" crossorigin src="./assets/index-CaWrFFFD.js"></script>
+  <script>
+    (function(){
+      function safeLog(msg){
+        try{console.log(msg);}catch(e){}
+        try{var el=document.getElementById('debug-logs');if(!el)return;var p=document.createElement('div');p.textContent=(new Date()).toLocaleTimeString()+" - "+msg;p.style.marginBottom='6px';el.appendChild(p);}catch(e){}
+      }
+
+      // Periodically check whether the app mounted into #root
+      var checks=0;var maxChecks=8;var interval=setInterval(function(){
+        try{
+          var root=document.getElementById('root');
+          var count=root?root.childElementCount:0;
+          safeLog('mount-check '+checks+' - #root childElementCount: '+count);
+          if(count>0){safeLog('mount detected, stopping checks');clearInterval(interval);return}
+          checks++;if(checks>=maxChecks){clearInterval(interval);safeLog('no mount detected after '+maxChecks+' checks');
+            // Try dynamic import to capture runtime errors (debug only)
+            try{safeLog('attempting dynamic import for debug');import('./assets/index-CaWrFFFD.js').then(function(){safeLog('dynamic import resolved')}).catch(function(e){safeLog('dynamic import rejected: '+(e&&e.stack?e.stack:e));});}catch(e){safeLog('dynamic import threw: '+e);} }
+        }catch(e){safeLog('mount-check exception: '+e)}
+      },700);
+    })();
+  </script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BqZuy71B.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+  </body>
+</html>
