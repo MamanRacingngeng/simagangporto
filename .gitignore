@@ -22,3 +22,14 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+.md
+
+# Ignore all env variants but keep example file tracked
+.env
+.env.*
+!.env.example
+
+# Sensitive key/certificate files
+*.key
+*.pem
+*.p12
