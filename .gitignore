@@ -33,3 +33,13 @@ Thumbs.db
 *.key
 *.pem
 *.p12
+
+# Temporary OAuth fix scripts
+check_real_oauth_client.php
+final_fix_oauth.php
+fix_google_oauth.php
+fix_oauth_now.php
+force_update_oauth.php
+update_google_oauth.php
+update_oauth_env.php
+verify_and_update_oauth.php
