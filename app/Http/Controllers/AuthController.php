@@ -174,50 +174,44 @@ class AuthController extends Controller
         $existingUser = User::where('email', strtolower(trim($data['email'])))->first();
         
         if ($existingUser) {
-            // Jika email sudah terdaftar tapi belum aktif, kirim ulang email verifikasi
-            if (!$existingUser->is_active) {
-                // Generate token baru jika belum ada
-                if (!$existingUser->email_verification_token) {
-                    $verificationToken = Str::random(64);
-                    $existingUser->update([
-                        'email_verification_token' => $verificationToken,
-                    ]);
-                } else {
-                    $verificationToken = $existingUser->email_verification_token;
+            // Generate token verifikasi baru (selalu generate baru untuk memastikan token fresh)
+            $verificationToken = Str::random(64);
+            
+            // Update data user yang sudah ada (update nama, password, dan reset status verifikasi)
+            $existingUser->update([
+                'nama' => $data['nama'],
+                'password' => bcrypt($data['password']),
+                'email_verification_token' => $verificationToken,
+                'email_verified_at' => null,
+                'is_active' => false, // Reset status aktif agar perlu verifikasi ulang
+            ]);
+            
+            // Kirim email verifikasi ke email user yang sudah terdaftar
+            try {
+                // Validasi konfigurasi email
+                $mailUsername = env('MAIL_USERNAME');
+                $mailPassword = env('MAIL_PASSWORD');
+                
+                if (empty($mailUsername) || 
+                    $mailUsername === 'emailpengirimygmaudipake' || 
+                    !filter_var($mailUsername, FILTER_VALIDATE_EMAIL) ||
+                    empty($mailPassword) ||
+                    $mailPassword === 'kodegoggleemail') {
+                    return redirect()->route('login')
+                        ->with('error', 'Registrasi berhasil, namun konfigurasi email belum lengkap. Silakan hubungi administrator untuk mengaktifkan email verifikasi.');
                 }
                 
-                // Kirim email verifikasi ke email user yang sudah terdaftar
-                try {
-                    // Validasi konfigurasi email
-                    $mailUsername = env('MAIL_USERNAME');
-                    $mailPassword = env('MAIL_PASSWORD');
-                    
-                    if (empty($mailUsername) || 
-                        $mailUsername === 'emailpengirimygmaudipake' || 
-                        !filter_var($mailUsername, FILTER_VALIDATE_EMAIL) ||
-                        empty($mailPassword) ||
-                        $mailPassword === 'kodegoggleemail') {
-                        return redirect()->route('login')
-                            ->with('error', 'Email sudah terdaftar tapi belum aktif. Konfigurasi email belum lengkap, silakan hubungi administrator.');
-                    }
-                    
-                    // Kirim email ke email user yang sudah terdaftar (bukan hardcoded)
-                    Mail::to($existingUser->email)->send(new VerifyEmail($existingUser, $verificationToken));
-                    \Log::info('Verification email resent to existing user: ' . $existingUser->email);
-                    
-                    return redirect()->route('login')
-                        ->with('info', 'Email sudah terdaftar tapi belum aktif. Email verifikasi telah dikirim ulang ke ' . $existingUser->email . '. Silakan cek inbox email Anda (termasuk folder Spam) untuk mengaktifkan akun.');
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send verification email to existing user ' . $existingUser->email . ': ' . $e->getMessage());
-                    return redirect()->route('login')
-                        ->with('error', 'Email sudah terdaftar tapi belum aktif. Gagal mengirim email verifikasi. Silakan gunakan fitur "Kirim Ulang Email Verifikasi" di halaman login.');
-                }
+                // Kirim email ke email user yang sudah terdaftar (bukan hardcoded)
+                Mail::to($existingUser->email)->send(new VerifyEmail($existingUser, $verificationToken));
+                \Log::info('Verification email sent to existing user (re-registration): ' . $existingUser->email);
+                
+                return redirect()->route('login')
+                    ->with('success', 'Registrasi berhasil! Data akun telah diperbarui. Email verifikasi telah dikirim ke ' . $existingUser->email . '. Silakan cek inbox email Anda (termasuk folder Spam) untuk mengaktifkan akun.');
+            } catch (\Exception $e) {
+                \Log::error('Failed to send verification email to existing user ' . $existingUser->email . ': ' . $e->getMessage());
+                return redirect()->route('login')
+                    ->with('error', 'Registrasi berhasil, namun email verifikasi gagal dikirim ke ' . $existingUser->email . '. Silakan gunakan fitur "Kirim Ulang Email Verifikasi" di halaman login atau hubungi administrator.');
             }
-            
-            // Jika email sudah terdaftar dan sudah aktif
-            return back()->withErrors([
-                'email' => 'Email sudah terdaftar. Silakan login atau gunakan email lain.',
-            ])->withInput($request->except('password', 'password_confirmation'));
         }
 
         // Verifikasi reCAPTCHA (hanya jika sudah dikonfigurasi)
@@ -357,6 +351,7 @@ class AuthController extends Controller
 
     /**
      * Kirim ulang email verifikasi
+     * Bisa digunakan berkali-kali tanpa batasan
      */
     public function resendVerificationEmail(Request $request)
     {
@@ -370,20 +365,43 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // Jika sudah verified dan aktif, tidak perlu kirim ulang
+        // Jika sudah verified dan aktif, tetap izinkan kirim ulang (untuk keperluan testing atau reset)
+        // Tapi beri informasi bahwa akun sudah aktif
         if ($user->email_verified_at && $user->is_active) {
-            return back()->with('info', 'Email Anda sudah diverifikasi dan akun sudah aktif. Silakan login.');
-        }
-
-        // Generate token baru jika belum ada
-        if (!$user->email_verification_token) {
+            // Tetap generate token baru dan kirim email (untuk memungkinkan verifikasi ulang jika diperlukan)
             $verificationToken = Str::random(64);
             $user->update([
                 'email_verification_token' => $verificationToken,
             ]);
-        } else {
-            $verificationToken = $user->email_verification_token;
+            
+            // Kirim email verifikasi meskipun sudah aktif (untuk keperluan testing atau reset)
+            try {
+                $mailUsername = env('MAIL_USERNAME');
+                $mailPassword = env('MAIL_PASSWORD');
+                
+                if (empty($mailUsername) || 
+                    $mailUsername === 'emailpengirimygmaudipake' || 
+                    !filter_var($mailUsername, FILTER_VALIDATE_EMAIL) ||
+                    empty($mailPassword) ||
+                    $mailPassword === 'kodegoggleemail') {
+                    return back()->withErrors(['email' => 'Konfigurasi email belum lengkap. Silakan hubungi administrator untuk mengaktifkan fitur email verifikasi.']);
+                }
+                
+                Mail::to($user->email)->send(new VerifyEmail($user, $verificationToken));
+                \Log::info('Verification email resent to active user: ' . $user->email);
+                
+                return back()->with('info', 'Email verifikasi telah dikirim ulang ke ' . $user->email . '. Catatan: Akun Anda sudah aktif, namun email verifikasi tetap dikirim untuk keperluan testing atau reset.');
+            } catch (\Exception $e) {
+                \Log::error('Failed to resend verification email to active user ' . $user->email . ': ' . $e->getMessage());
+                return back()->withErrors(['email' => 'Gagal mengirim email verifikasi: ' . $e->getMessage() . '. Silakan coba lagi nanti atau hubungi administrator.']);
+            }
         }
+
+        // Generate token baru (selalu generate baru untuk memastikan token fresh)
+        $verificationToken = Str::random(64);
+        $user->update([
+            'email_verification_token' => $verificationToken,
+        ]);
 
         // Validasi konfigurasi email sebelum kirim
         $mailUsername = env('MAIL_USERNAME');

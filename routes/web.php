@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
@@ -34,8 +35,21 @@ Route::post('/verification/resend', [AuthController::class, 'resendVerificationE
 // Google OAuth (user & admin) - menggunakan SocialiteController
 Route::get('/oauth/google/{context?}', [SocialiteController::class, 'redirect'])
     ->name('oauth.google.redirect');
+
+// Callback route - PASTIKAN INI DIPANGGIL
 Route::get('/oauth/google/callback', [SocialiteController::class, 'callback'])
     ->name('oauth.google.callback');
+
+// Route alternatif untuk debugging - tangkap semua kemungkinan callback URL
+Route::any('/auth/google/callback', function(Request $request) {
+    \Log::info('=== ALTERNATIVE CALLBACK ROUTE HIT ===', [
+        'url' => $request->fullUrl(),
+        'method' => $request->method(),
+        'all_params' => $request->all(),
+    ]);
+    // Redirect ke callback yang benar
+    return redirect()->route('oauth.google.callback', $request->all());
+})->name('oauth.google.callback.alt');
 
 // Test route untuk memastikan callback bisa diakses
 Route::get('/test-callback', function() {

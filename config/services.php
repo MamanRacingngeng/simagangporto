@@ -38,7 +38,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('APP_URL') . '/oauth/google/callback',
+        'redirect' => rtrim(env('APP_URL', 'http://localhost'), '/') . '/oauth/google/callback',
     ],
 
 ];

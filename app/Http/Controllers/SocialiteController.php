@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Services\GoogleOAuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 
 class SocialiteController extends Controller
 {
+    protected $oauthService;
+
+    public function __construct(GoogleOAuthService $oauthService)
+    {
+        $this->oauthService = $oauthService;
+    }
+
     /**
      * Redirect user to Google OAuth.
      */
@@ -25,166 +30,117 @@ class SocialiteController extends Controller
             $request->session()->put('google_login_context', $context);
             $request->session()->save();
 
-            \Log::info('Redirecting to Google OAuth', [
+            Log::info('SocialiteController: Redirecting to Google OAuth', [
                 'context' => $context,
-                'redirect_uri' => config('services.google.redirect'),
+                'session_id' => $request->session()->getId(),
             ]);
 
-            return Socialite::driver('google')
-                ->with(['state' => base64_encode(json_encode(['context' => $context]))])
-                ->redirect();
+            return $this->oauthService->redirectToGoogle($context);
         } catch (\Exception $e) {
-            \Log::error('Google OAuth Redirect Error: ' . $e->getMessage());
-            return redirect()->route($context === 'admin' ? 'admin.login' : 'login')
-                ->withErrors(['error' => 'Terjadi kesalahan saat mengakses Google.']);
+            Log::error('Google OAuth Redirect Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            if ($context === 'admin') {
+                return redirect('/admin/login')
+                    ->withErrors(['error' => 'Terjadi kesalahan saat mengakses Google: ' . $e->getMessage()]);
+            }
+            return redirect('/login')
+                ->withErrors(['error' => 'Terjadi kesalahan saat mengakses Google: ' . $e->getMessage()]);
         }
     }
 
     /**
      * Handle callback from Google OAuth.
+     * INI ADALAH POINT KRITIS - Pastikan session tidak hilang
      */
     public function callback(Request $request)
     {
-        \Log::info('=== Google OAuth Callback CALLED ===', [
+        // Log SEMUA request yang masuk ke callback - PASTIKAN INI DIPANGGIL
+        Log::info('=== SocialiteController: Google OAuth Callback CALLED ===', [
             'url' => $request->fullUrl(),
+            'method' => $request->method(),
             'has_code' => $request->has('code'),
             'has_error' => $request->has('error'),
+            'code' => $request->input('code') ? 'EXISTS' : 'MISSING',
+            'error' => $request->input('error'),
+            'state' => $request->input('state') ? 'EXISTS' : 'MISSING',
+            'all_params' => $request->all(),
+            'session_id' => $request->session()->getId(),
+            'session_data' => $request->session()->all(),
         ]);
 
         try {
-            // Ambil context dari session atau state parameter
+            // Ambil state token dari request (dari Google)
+            $stateToken = $request->input('state');
+            
+            // Backup: coba ambil dari session jika state token tidak ada
             $context = $request->session()->get('google_login_context', 'user');
             
-            // Backup: ambil dari state parameter jika session hilang
-            if ($context === 'user' && $request->has('state')) {
-                try {
-                    $state = json_decode(base64_decode($request->input('state')), true);
-                    if (isset($state['context'])) {
-                        $context = $state['context'];
-                        $request->session()->put('google_login_context', $context);
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to decode state parameter: ' . $e->getMessage());
-                }
-            }
-
-            // Handle jika user menolak akses
-            if ($request->has('error')) {
-                \Log::warning('Google OAuth access denied', ['error' => $request->input('error')]);
-                return redirect()->route($context === 'admin' ? 'admin.login' : 'login')
-                    ->withErrors(['error' => 'Akses Google ditolak. Silakan coba lagi.']);
-            }
-
-            // Get user from Google
-            \Log::info('Attempting to get user from Google');
-            $googleUser = Socialite::driver('google')->stateless()->user();
-            
-            \Log::info('Google user retrieved', [
-                'email' => $googleUser->getEmail(),
-                'id' => $googleUser->getId()
+            Log::info('Processing Google OAuth callback', [
+                'state_token' => $stateToken ? 'EXISTS' : 'MISSING',
+                'context_from_session' => $context,
+                'session_id' => $request->session()->getId(),
+                'has_code' => $request->has('code'),
+                'has_error' => $request->has('error'),
             ]);
 
-            // Cari atau buat user
-            $user = User::where('email', $googleUser->getEmail())
-                ->orWhere('google_id', $googleUser->getId())
-                ->first();
+            // Handle callback menggunakan service dengan state token
+            // Service akan mengambil context dari cache menggunakan state token
+            $result = $this->oauthService->handleCallback($stateToken);
 
-            if (!$user) {
-                if ($context === 'admin') {
-                    return redirect()->route('admin.login')
-                        ->withErrors(['email' => 'Akun admin tidak ditemukan untuk email ini.'])
-                        ->withInput(['email' => $googleUser->getEmail()]);
-                }
-
-                // Buat user baru
-                $user = User::create([
-                    'nama' => $googleUser->getName(),
-                    'email' => strtolower(trim($googleUser->getEmail())),
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                    'password' => Hash::make(Str::random(32)),
-                    'role' => 'user',
-                    'is_active' => true,
-                    'email_verified_at' => now(),
-                ]);
-                \Log::info('New user created from Google login', ['email' => $user->email]);
-            } else {
-                // Update google_id jika belum ada
-                if (!$user->google_id) {
-                    $user->update([
-                        'google_id' => $googleUser->getId(),
-                        'avatar' => $googleUser->getAvatar(),
-                    ]);
-                }
-            }
-
-            // Validasi untuk admin
-            if ($context === 'admin' && !$user->isAdmin()) {
-                return redirect()->route('admin.login')
-                    ->withErrors(['email' => 'Akun ini tidak memiliki akses admin.'])
-                    ->withInput(['email' => $googleUser->getEmail()]);
-            }
-
-            // Pastikan user aktif
-            if (!$user->is_active) {
-                $user->update([
-                    'is_active' => true,
-                    'email_verified_at' => now(),
-                ]);
-            }
-
-            // Login user dengan remember me
-            Auth::login($user, true);
-            
-            // Simpan session SEBELUM regenerate untuk memastikan login tersimpan
+            // Hapus context dari session setelah berhasil
+            $request->session()->forget('google_login_context');
             $request->session()->save();
             
-            // Regenerate session untuk keamanan
-            $request->session()->regenerate();
-            
-            // Hapus context dari session
-            $request->session()->forget('google_login_context');
-            
-            // Simpan session lagi setelah regenerate
+            // Pastikan session disimpan sebelum redirect
             $request->session()->save();
 
             // Verifikasi login berhasil
-            if (!Auth::check()) {
-                \Log::error('Login failed - user not authenticated after Auth::login()', [
-                    'user_id' => $user->id,
-                    'email' => $user->email
+            if (!auth()->check()) {
+                Log::error('Login failed - user not authenticated after OAuth service', [
+                    'user_id' => $result['user']->id ?? null,
+                    'email' => $result['user']->email ?? null
                 ]);
-                throw new \Exception('Login gagal. User tidak terautentikasi setelah login.');
+                throw new \Exception('Login gagal. User tidak terautentikasi setelah OAuth.');
             }
 
-            \Log::info('User logged in successfully via Google - REDIRECTING TO DASHBOARD', [
-                'email' => $user->email,
-                'role' => $user->role,
-                'is_admin' => $user->isAdmin(),
+            Log::info('=== REDIRECTING TO DASHBOARD ===', [
+                'email' => $result['user']->email,
+                'role' => $result['user']->role,
+                'redirect_route' => $result['redirect_route'],
+                'auth_check' => auth()->check(),
+                'auth_user_id' => auth()->id(),
                 'session_id' => $request->session()->getId(),
-                'auth_check' => Auth::check(),
-                'auth_user_id' => Auth::id()
             ]);
 
-            // Redirect berdasarkan role - PASTIKAN TIDAK ADA REDIRECT LOOP
-            if ($user->isAdmin()) {
-                \Log::info('Redirecting admin to admin.dashboard');
-                return redirect()->route('admin.dashboard')
-                    ->with('success', 'Login Google berhasil sebagai Admin.');
+            // Pastikan session disimpan sebelum redirect
+            $request->session()->save();
+            
+            // Redirect ke dashboard dengan menggunakan intended() untuk menghindari redirect loop
+            $redirectRoute = $result['redirect_route'];
+            
+            // Redirect ke dashboard berdasarkan route
+            if ($redirectRoute === 'admin.dashboard') {
+                return redirect('/admin/dashboard')
+                    ->with('success', $result['message']);
             }
+            return redirect('/dashboard')
+                ->with('success', $result['message']);
 
-            \Log::info('Redirecting user to dashboard');
-            return redirect()->route('dashboard')
-                ->with('success', 'Login Google berhasil.');
         } catch (\Exception $e) {
-            \Log::error('Google OAuth Callback Error: ' . $e->getMessage(), [
+            Log::error('Google OAuth Callback Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'session_id' => $request->session()->getId(),
             ]);
 
             $context = $request->session()->get('google_login_context', 'user');
-            return redirect()->route($context === 'admin' ? 'admin.login' : 'login')
+            if ($context === 'admin') {
+                return redirect('/admin/login')
+                    ->withErrors(['error' => 'Login Google gagal: ' . $e->getMessage()]);
+            }
+            return redirect('/login')
                 ->withErrors(['error' => 'Login Google gagal: ' . $e->getMessage()]);
         }
     }

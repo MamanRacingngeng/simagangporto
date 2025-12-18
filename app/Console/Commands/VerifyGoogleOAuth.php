@@ -98,13 +98,20 @@ class VerifyGoogleOAuth extends Command
                  Route::has('oauth.google.callback');
         
         if ($allOk) {
-            $this->info('✅ Semua konfigurasi sudah benar!');
+            $this->info('✅ Semua konfigurasi Laravel sudah benar!');
             $this->newLine();
-            $this->info('Langkah selanjutnya:');
-            $this->line('1. Pastikan redirect URI di Google Cloud Console sama dengan:');
+            $this->warn('⚠️  PENTING: Pastikan redirect URI di Google Cloud Console sudah benar!');
+            $this->newLine();
+            $this->info('Langkah yang HARUS dilakukan:');
+            $this->line('1. Buka: https://console.cloud.google.com/');
+            $this->line('2. Pilih project → APIs & Services → Credentials');
+            $this->line('3. Klik OAuth 2.0 Client ID Anda');
+            $this->line('4. Di "Authorized redirect URIs", pastikan ada:');
             $this->line('   ' . $expectedCallback);
-            $this->line('2. Clear cache: php artisan config:clear');
-            $this->line('3. Test login dengan Google');
+            $this->line('5. Jika belum ada, klik "ADD URI" dan tambahkan');
+            $this->line('6. Klik "SAVE" dan tunggu 1-2 menit');
+            $this->newLine();
+            $this->info('Setelah itu, test login Google lagi.');
         } else {
             $this->error('❌ Ada masalah dengan konfigurasi!');
             $this->newLine();
