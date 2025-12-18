@@ -49,7 +49,7 @@ class GoogleOAuthService
             return Socialite::driver('google')
                 ->redirectUrl($redirectUri)
                 ->with([
-                    'state' => $stateToken,
+                    'state' => $stateToken, 
                     'prompt' => 'consent', // Memaksa Google menampilkan consent screen
                     'access_type' => 'offline',
                 ])
