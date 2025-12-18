@@ -5,32 +5,47 @@
             Lihat momen-momen berharga dari kegiatan magang di BBKB Yogyakarta. Dokumentasi pengalaman peserta magang dalam berbagai kegiatan dan proyek.
         </p>
 
+        {{-- Statistik Cards --}}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            @if(isset($galeri) && count($galeri) > 0)
-                @foreach($galeri as $img)
-                <div class="rounded-xl shadow overflow-hidden hover:scale-105 transition">
-                    <img src="{{ $img->url ?? $img }}" alt="Kegiatan Magang" class="w-full h-full object-cover">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center gap-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-3xl shadow-md">
+                    👥
                 </div>
-                @endforeach
-            @else
-                @php
-                    // Sample images untuk galeri magang
-                    $sampleImages = [
-                        '/images/baground.jpg',
-                        '/images/hero-batik.jpg',
-                        '/images/baground.jpg',
-                        '/images/hero-batik.jpg'
-                    ];
-                @endphp
-                @foreach($sampleImages as $img)
-                <div class="rounded-xl shadow overflow-hidden hover:scale-105 transition bg-gray-200 aspect-square">
-                    <img src="{{ $img }}" alt="Kegiatan Magang" class="w-full h-full object-cover">
+                <div class="flex-1">
+                    <div class="text-2xl font-bold text-blue-900 mb-1">500+</div>
+                    <div class="text-sm font-semibold text-gray-600">Peserta Magang</div>
                 </div>
-                @endforeach
-            @endif
+            </div>
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center gap-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-3xl shadow-md">
+                    🎓
+                </div>
+                <div class="flex-1">
+                    <div class="text-2xl font-bold text-blue-900 mb-1">15+</div>
+                    <div class="text-sm font-semibold text-gray-600">Program Tersedia</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center gap-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-3xl shadow-md">
+                    ⭐
+                </div>
+                <div class="flex-1">
+                    <div class="text-2xl font-bold text-blue-900 mb-1">10+</div>
+                    <div class="text-sm font-semibold text-gray-600">Tahun Pengalaman</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center gap-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-3xl shadow-md">
+                    📜
+                </div>
+                <div class="flex-1">
+                    <div class="text-2xl font-bold text-blue-900 mb-1">450+</div>
+                    <div class="text-sm font-semibold text-gray-600">Sertifikat Diterbitkan</div>
+                </div>
+            </div>
         </div>
 
-        <div class="text-center">
+        <div class="text-center mt-8">
             <a href="{{ route('galeri-magang') }}" 
                class="inline-flex items-center px-6 py-3 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition font-semibold shadow-md hover:shadow-lg">
                 Lihat Galeri Magang

@@ -30,13 +30,37 @@ class WelcomeController extends Controller
             ]);
         }
 
-        // Sample data galeri (bisa diganti dengan model Galeri jika ada)
-        $galeri = collect([
-            (object) ['url' => '/images/logoBBKB.png'],
-            (object) ['url' => '/images/logoBBKB.png'],
-            (object) ['url' => '/images/logoBBKB.png'],
-            (object) ['url' => '/images/logoBBKB.png'],
-        ]);
+        // Ambil data galeri dari database atau gunakan gambar placeholder
+        try {
+            $galeri = \App\Models\GaleriMagang::aktif()
+                ->terurut()
+                ->limit(6)
+                ->get()
+                ->map(function ($item) {
+                    return (object) [
+                        'url' => asset('storage/' . $item->foto),
+                        'judul' => $item->judul,
+                    ];
+                });
+            
+            // Jika tidak ada data galeri, gunakan gambar placeholder
+            if ($galeri->isEmpty()) {
+                $galeri = collect([
+                    (object) ['url' => '/images/baground.jpg', 'judul' => 'Kegiatan Magang'],
+                    (object) ['url' => '/images/hero-batik.jpg', 'judul' => 'Kegiatan Magang'],
+                    (object) ['url' => '/images/baground.jpg', 'judul' => 'Kegiatan Magang'],
+                    (object) ['url' => '/images/hero-batik.jpg', 'judul' => 'Kegiatan Magang'],
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Jika error, gunakan gambar placeholder
+            $galeri = collect([
+                (object) ['url' => '/images/baground.jpg', 'judul' => 'Kegiatan Magang'],
+                (object) ['url' => '/images/hero-batik.jpg', 'judul' => 'Kegiatan Magang'],
+                (object) ['url' => '/images/baground.jpg', 'judul' => 'Kegiatan Magang'],
+                (object) ['url' => '/images/hero-batik.jpg', 'judul' => 'Kegiatan Magang'],
+            ]);
+        }
 
         return view('welcome', compact('jobs', 'galeri'));
     }

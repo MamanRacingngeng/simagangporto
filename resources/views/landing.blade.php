@@ -62,11 +62,12 @@
       @media (max-width:640px){.gallery{grid-template-columns:1fr}}
       /* Galeri Stats Cards */
       .gallery-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-bottom:32px}
-      .gallery-stat-card{background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);border:1px solid #e5e7eb;border-radius:16px;padding:24px;text-align:center;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(2,6,23,.04)}
+      .gallery-stat-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;display:flex;align-items:center;gap:16px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(2,6,23,.04)}
       .gallery-stat-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,23,.08);border-color:#F4B400}
-      .gallery-stat-icon{width:56px;height:56px;margin:0 auto 16px;background:linear-gradient(135deg,#F4B400 0%,#fbbf24 100%);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px}
-      .gallery-stat-card h3{font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px}
-      .gallery-stat-card p{font-size:14px;color:#64748b;margin:0;line-height:1.5}
+      .gallery-stat-icon{font-size:40px;line-height:1;flex-shrink:0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#F4B400 0%,#fbbf24 100%);border-radius:12px;box-shadow:0 4px 12px rgba(244,180,0,.2)}
+      .gallery-stat-content{flex:1;display:flex;flex-direction:column;gap:4px}
+      .gallery-stat-number{font-size:28px;font-weight:800;color:#0C3A6B;line-height:1.2}
+      .gallery-stat-label{font-size:14px;font-weight:600;color:#64748b;line-height:1.3}
       @media (max-width:960px){.gallery-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media (max-width:640px){.gallery-stats{grid-template-columns:1fr}}
       /* Partner */
@@ -173,24 +174,32 @@
         
         <div class="gallery-stats">
           <div class="gallery-stat-card">
-            <div class="gallery-stat-icon">📸</div>
-            <h3>Kegiatan Dokumentasi</h3>
-            <p>Dokumentasi lengkap setiap aktivitas dan proyek magang</p>
+            <div class="gallery-stat-icon">👥</div>
+            <div class="gallery-stat-content">
+              <div class="gallery-stat-number">500+</div>
+              <div class="gallery-stat-label">Peserta Magang</div>
+            </div>
           </div>
           <div class="gallery-stat-card">
-            <div class="gallery-stat-icon">🎨</div>
-            <h3>Portfolio Karya</h3>
-            <p>Koleksi hasil karya peserta dalam berbagai bidang keahlian</p>
+            <div class="gallery-stat-icon">🎓</div>
+            <div class="gallery-stat-content">
+              <div class="gallery-stat-number">15+</div>
+              <div class="gallery-stat-label">Program Tersedia</div>
+            </div>
           </div>
           <div class="gallery-stat-card">
-            <div class="gallery-stat-icon">🤝</div>
-            <h3>Kolaborasi Tim</h3>
-            <p>Momen kebersamaan dan kerjasama dalam tim proyek</p>
+            <div class="gallery-stat-icon">⭐</div>
+            <div class="gallery-stat-content">
+              <div class="gallery-stat-number">10+</div>
+              <div class="gallery-stat-label">Tahun Pengalaman</div>
+            </div>
           </div>
           <div class="gallery-stat-card">
-            <div class="gallery-stat-icon">🏆</div>
-            <h3>Pencapaian</h3>
-            <p>Rekam jejak prestasi dan milestone yang dicapai</p>
+            <div class="gallery-stat-icon">📜</div>
+            <div class="gallery-stat-content">
+              <div class="gallery-stat-number">450+</div>
+              <div class="gallery-stat-label">Sertifikat Diterbitkan</div>
+            </div>
           </div>
         </div>
 
