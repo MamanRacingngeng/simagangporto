@@ -60,6 +60,15 @@
       .gallery img{width:100%;height:230px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb}
       @media (max-width:960px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media (max-width:640px){.gallery{grid-template-columns:1fr}}
+      /* Galeri Stats Cards */
+      .gallery-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-bottom:32px}
+      .gallery-stat-card{background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);border:1px solid #e5e7eb;border-radius:16px;padding:24px;text-align:center;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(2,6,23,.04)}
+      .gallery-stat-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,23,.08);border-color:#F4B400}
+      .gallery-stat-icon{width:56px;height:56px;margin:0 auto 16px;background:linear-gradient(135deg,#F4B400 0%,#fbbf24 100%);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px}
+      .gallery-stat-card h3{font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px}
+      .gallery-stat-card p{font-size:14px;color:#64748b;margin:0;line-height:1.5}
+      @media (max-width:960px){.gallery-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media (max-width:640px){.gallery-stats{grid-template-columns:1fr}}
       /* Partner */
       .partners{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;align-items:center}
       .partners .logo{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:16px;box-shadow:0 6px 16px rgba(2,6,23,.04)}
@@ -159,8 +168,32 @@
 
     <section id="galeri" class="section">
       <div class="container">
-        <h2 style="margin:0 0 18px;font-size:28px">Galeri Magang</h2>
-        <p style="margin:0 0 24px;color:#9ca3af;max-width:780px">Lihat momen-momen berharga dari kegiatan magang di BBKB Yogyakarta. Dokumentasi pengalaman peserta magang dalam berbagai kegiatan dan proyek.</p>
+        <h2 style="margin:0 0 18px;font-size:28px;text-align:center">Galeri Magang</h2>
+        <p style="margin:0 0 32px;color:#9ca3af;max-width:780px;text-align:center;margin-left:auto;margin-right:auto">Lihat momen-momen berharga dari kegiatan magang di BBKB Yogyakarta. Dokumentasi pengalaman peserta magang dalam berbagai kegiatan dan proyek.</p>
+        
+        <div class="gallery-stats">
+          <div class="gallery-stat-card">
+            <div class="gallery-stat-icon">📸</div>
+            <h3>Kegiatan Dokumentasi</h3>
+            <p>Dokumentasi lengkap setiap aktivitas dan proyek magang</p>
+          </div>
+          <div class="gallery-stat-card">
+            <div class="gallery-stat-icon">🎨</div>
+            <h3>Portfolio Karya</h3>
+            <p>Koleksi hasil karya peserta dalam berbagai bidang keahlian</p>
+          </div>
+          <div class="gallery-stat-card">
+            <div class="gallery-stat-icon">🤝</div>
+            <h3>Kolaborasi Tim</h3>
+            <p>Momen kebersamaan dan kerjasama dalam tim proyek</p>
+          </div>
+          <div class="gallery-stat-card">
+            <div class="gallery-stat-icon">🏆</div>
+            <h3>Pencapaian</h3>
+            <p>Rekam jejak prestasi dan milestone yang dicapai</p>
+          </div>
+        </div>
+
         <div class="gallery">
           <img src="/images/baground.jpg" alt="Kegiatan Magang">
           <img src="/images/hero-batik.jpg" alt="Kegiatan Magang">
@@ -169,8 +202,8 @@
           <img src="/images/baground.jpg" alt="Kegiatan Magang">
           <img src="/images/hero-batik.jpg" alt="Kegiatan Magang">
         </div>
-        <div style="margin-top:24px;text-align:center">
-          <a class="btn btn-primary" href="{{ route('galeri-magang') }}">Lihat Galeri Magang</a>
+        <div style="margin-top:32px;text-align:center">
+          <a class="btn btn-primary" href="{{ route('galeri-magang') }}">Lihat Galeri Magang <svg style="width:16px;height:16px;display:inline-block;margin-left:6px;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></a>
         </div>
       </div>
     </section>
