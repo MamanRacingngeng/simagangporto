@@ -60,9 +60,6 @@ if (!empty($googleConfig['client_id']) && !str_contains($googleConfig['client_id
     $warnings[] = "Client ID tidak terlihat valid (harus berakhiran .apps.googleusercontent.com)";
 }
 
-// Cek apakah Client ID adalah yang lama (deleted) - sekarang sudah aktif kembali
-// Client ID 621317498890-4ohnt5kuac8jilnvhlvmsodjge833psq adalah yang terbaru dan aktif
-
 // Cek apakah Client ID terlihat seperti placeholder
 if (str_contains($googleConfig['client_id'], 'YOUR_GOOGLE_CLIENT_ID') || 
     str_contains($googleConfig['client_id'], 'PASTE') ||

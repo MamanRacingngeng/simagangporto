@@ -123,10 +123,9 @@ if (empty($googleConfig['client_id'])) {
     $errors[] = "Client ID tidak ditemukan";
     $allOk = false;
 } else {
-    if (str_contains($googleConfig['client_id'], '4ohnt5kuac8jilnvhlvmsodjge833psq')) {
-        // This is the latest Client ID
-    } elseif (str_contains($googleConfig['client_id'], 'r5eqrarm7aupr08i1if6oahdf4nfgk9e')) {
-        $warnings[] = "Client ID yang digunakan mungkin bukan yang terbaru. Pastikan menggunakan: 621317498890-4ohnt5kuac8jilnvhlvmsodjge833psq";
+    // Validasi format Client ID (harus berakhiran .apps.googleusercontent.com)
+    if (!empty($googleConfig['client_id']) && !str_contains($googleConfig['client_id'], '.apps.googleusercontent.com')) {
+        $warnings[] = "Format Client ID tidak valid. Pastikan Client ID berakhiran .apps.googleusercontent.com";
     }
 }
 
@@ -209,8 +208,9 @@ if ($allOk && empty($warnings)) {
     echo "<ol style='line-height: 2;'>";
     if (empty($googleConfig['client_id']) || empty($googleConfig['client_secret'])) {
         echo "<li>Edit file <code>.env</code> di root project dan pastikan ada:</li>";
-        echo "<pre style='background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto;'>GOOGLE_CLIENT_ID=621317498890-4ohnt5kuac8jilnvhlvmsodjge833psq.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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</pre>";
+        echo "<pre style='background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto;'>GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=YOUR_CLIENT_SECRET</pre>";
+        echo "<p><strong>⚠️ PENTING:</strong> Ganti YOUR_CLIENT_ID dan YOUR_CLIENT_SECRET dengan credentials yang Anda dapatkan dari Google Cloud Console.</p>";
     }
     echo "<li>Pastikan redirect URI <code>{$googleConfig['redirect_uri']}</code> sudah ditambahkan di Google Cloud Console</li>";
     echo "<li>Lihat file <code>SETUP_OAUTH_CLIENT.md</code> untuk panduan lengkap</li>";

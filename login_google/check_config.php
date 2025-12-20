@@ -42,9 +42,11 @@ if ($envExists) {
     echo "<h3>" . ($hasClientId && !empty($clientId) ? "✅" : "❌") . " GOOGLE_CLIENT_ID</h3>";
     if ($hasClientId && !empty($clientId)) {
         echo "<p>Value: <code>" . substr($clientId, 0, 50) . "...</code></p>";
-        // Client ID 621317498890-4ohnt5kuac8jilnvhlvmsodjge833psq adalah yang terbaru dan aktif
-        if (str_contains($clientId, '4ohnt5kuac8jilnvhlvmsodjge833psq')) {
-            echo "<p class='ok'><strong>✅ Client ID Terbaru:</strong> Client ID ini adalah yang aktif dan terbaru.</p>";
+        // Validasi format Client ID
+        if (str_contains($clientId, '.apps.googleusercontent.com')) {
+            echo "<p class='ok'><strong>✅ Format Client ID Valid:</strong> Format Client ID sudah benar.</p>";
+        } else {
+            echo "<p class='error'><strong>⚠️ Format Client ID Tidak Valid:</strong> Client ID harus berakhiran .apps.googleusercontent.com</p>";
         }
     } else {
         echo "<p class='error'>Tidak ditemukan atau kosong</p>";
@@ -74,7 +76,7 @@ if ($envExists) {
     
     // Summary
     $allOk = $hasClientId && !empty($clientId) && $hasClientSecret && !empty($clientSecret) && 
-             !str_contains($clientId, '4ohnt5kuac8jilnvhlvmsodjge833psq');
+             str_contains($clientId, '.apps.googleusercontent.com');
     
     echo "<div class='box " . ($allOk ? 'success' : 'danger') . "'>";
     echo "<h3>" . ($allOk ? "✅" : "❌") . " Status Konfigurasi</h3>";
@@ -95,8 +97,8 @@ if ($envExists) {
         if (!$hasClientSecret || empty($clientSecret)) {
             echo "<li>Tambahkan <code>GOOGLE_CLIENT_SECRET</code> di file .env</li>";
         }
-        if (str_contains($clientId, '4ohnt5kuac8jilnvhlvmsodjge833psq')) {
-            echo "<li>Buat OAuth Client ID baru di Google Cloud Console (Client ID lama sudah dihapus)</li>";
+        if ($hasClientId && !empty($clientId) && !str_contains($clientId, '.apps.googleusercontent.com')) {
+            echo "<li>Pastikan Client ID yang Anda masukkan berakhiran .apps.googleusercontent.com</li>";
         }
         echo "<li>Lihat file <code>SETUP_OAUTH_CLIENT.md</code> untuk panduan lengkap</li>";
         echo "</ol>";
