@@ -714,7 +714,7 @@
                             id="password" 
                             name="password" 
                             class="form-input" 
-                            placeholder="Masukkan kala sandi"
+                            placeholder="Masukkan kata sandi"
                             required
                         >
                         @error('password')

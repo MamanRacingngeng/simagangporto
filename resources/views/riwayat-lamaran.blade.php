@@ -885,7 +885,7 @@
                   $step1Status = 'active';
                 } elseif ($currentStatus === 'Diverifikasi') {
                   $step1Status = 'completed';
-                  $step2Status = 'active';
+                  $step2Status = 'completed'; // Dokumen sudah diverifikasi/disetujui
                 } elseif (in_array($currentStatus, ['Diterima', 'Ditolak'])) {
                   $step1Status = 'completed';
                   $step2Status = 'completed';
@@ -929,7 +929,7 @@
                     $step3Color = $step3Status === 'completed' ? (($currentStatus && $currentStatus === 'Diterima') ? '#10B981' : '#EF4444') : '#9CA3AF';
                     
                     // Status border color
-                    $statusBorderColor = $step1Status === 'active' ? '#3B82F6' : ($step2Status === 'active' ? '#F59E0B' : (($currentStatus && $currentStatus === 'Diterima') ? '#10B981' : '#EF4444'));
+                    $statusBorderColor = $step1Status === 'active' ? '#3B82F6' : ($step2Status === 'active' ? '#F59E0B' : ($step2Status === 'completed' && $currentStatus === 'Diverifikasi' ? '#10B981' : (($currentStatus && $currentStatus === 'Diterima') ? '#10B981' : '#EF4444')));
                     
                     // Build style strings to avoid linter errors
                     $progressLineFillStyle = "height: 100%; background: linear-gradient(90deg, {$progressColor1} 0%, {$progressColor2} 50%, {$progressColor3} 100%); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease; border-radius: 2px; width: {$progressWidth}%; position: relative;";
@@ -989,9 +989,9 @@
                       <h4 style="<?php echo $step2ColorStyle; ?>">2. Dokumen Diverifikasi</h4>
                       <p style="margin: 0; font-size: 12px; color: #6B7280; line-height: 1.5;">
                         @if($step2Status === 'completed')
-                          Selesai
+                          Disetujui
                         @elseif($step2Status === 'active')
-                          {{ $currentStatus === 'Diverifikasi' ? 'Sedang Diproses' : 'Menunggu' }}
+                          Sedang Diproses
                         @else
                           Menunggu
                         @endif
@@ -1038,7 +1038,7 @@
                       @if($currentStatus === 'Diajukan')
                         Status saat ini: <strong style="color: #3B82F6;">Berkas Diajukan</strong> — Permohonan Anda sedang menunggu verifikasi dokumen oleh Admin.
                       @elseif($currentStatus === 'Diverifikasi')
-                        Status saat ini: <strong style="color: #F59E0B;">Dokumen Diverifikasi</strong> — Dokumen Anda sudah valid, menunggu penetapan keputusan final.
+                        Status saat ini: <strong style="color: #10B981;">Dokumen Diverifikasi</strong> — Dokumen Anda sudah disetujui dan valid, menunggu penetapan keputusan final.
                       @elseif($currentStatus === 'Diterima')
                         Status saat ini: <strong style="color: #10B981;">DITERIMA</strong> — Permohonan Anda telah disetujui.
                       @elseif($currentStatus === 'Ditolak')

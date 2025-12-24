@@ -197,6 +197,11 @@
         color: #FFFFFF;
     }
 
+    .btn-warning {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: #FFFFFF;
+    }
+
     .btn-reject {
         background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
         color: #FFFFFF;
@@ -581,18 +586,24 @@
     <h2 class="actions-title">Aksi Verifikasi</h2>
     
     @if($permohonan->status === 'Diajukan')
-        <!-- Aksi 1: Verifikasi Dokumen -->
-        <div style="margin-bottom: 24px;">
-            <form action="{{ route('admin.verifikasi_permohonan', $permohonan->id) }}" method="POST" onsubmit="return confirm('Yakin ingin memverifikasi dokumen? Sistem akan mengecek kelengkapan dan validitas dokumen.')">
+        <!-- Aksi Verifikasi Dokumen -->
+        <div class="action-buttons" style="margin-bottom: 24px;">
+            <form action="{{ route('admin.verifikasi_permohonan', $permohonan->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin menyetujui dokumen? Status akan diubah menjadi "Diverifikasi".')">
                 @csrf
                 <button type="submit" class="btn-action btn-verify">
                     ✓ Setujui Dokumen (Status → Diverifikasi)
                 </button>
-                <p style="margin-top: 8px; font-size: 14px; color: #6B7280;">
-                    Memverifikasi dokumen dan mengubah status menjadi "Diverifikasi"
-                </p>
             </form>
+            <button type="button" class="btn-action btn-reject" onclick="openRejectionModalFromDiajukan()">
+                ✗ Tolak Dokumen (Status → Ditolak)
+            </button>
         </div>
+        <p style="margin-top: 12px; font-size: 14px; color: #6B7280;">
+            Pilih salah satu: <strong>Setujui</strong> jika dokumen lengkap dan valid, atau <strong>Tolak</strong> jika dokumen tidak memenuhi syarat.
+        </p>
+        <p style="margin-top: 8px; font-size: 13px; color: #F59E0B; font-weight: 600;">
+            ⚠️ Peringatan: Keputusan yang Anda pilih akan bersifat FINAL dan tidak dapat diubah kembali.
+        </p>
     @endif
 
     @if($permohonan->status === 'Diverifikasi')
@@ -704,6 +715,15 @@ function switchTab(tabName, buttonElement) {
 }
 
 function openRejectionModal() {
+    document.getElementById('rejectionModal').classList.add('active');
+}
+
+function openRejectionModalFromDiajukan() {
+    // Pastikan form action menggunakan route yang benar untuk status Diajukan
+    const form = document.getElementById('rejectionForm');
+    if (form) {
+        form.action = '{{ route("admin.update_status_permohonan", $permohonan->id) }}';
+    }
     document.getElementById('rejectionModal').classList.add('active');
 }
 

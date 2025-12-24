@@ -45,12 +45,13 @@ class DashboardController extends Controller
             ->get();
         
         // Cek apakah ada lowongan tersedia
-        // Lowongan muncul jika: kuota tersedia DAN jadwal sudah dibuat DAN jadwal sudah dimulai dan belum berakhir
+        // Lowongan muncul jika: kuota tersedia DAN jadwal sudah dibuat DAN jadwal belum berakhir (termasuk yang akan datang)
         $today = now()->toDateString();
         $allKuota = KuotaMagang::whereColumn('kuota_terpakai', '<', 'kuota_max')->get();
         $allJadwal = JadwalMagang::all();
         
-        $lowonganTersedia = $allKuota->filter(function ($kuota) use ($allJadwal, $today) {
+        // Hitung jumlah lowongan tersedia dan detailnya untuk ditampilkan di banner
+        $lowonganTersediaList = $allKuota->filter(function ($kuota) use ($allJadwal, $today) {
             // Cari jadwal dengan periode dan posisi yang sama (case-insensitive dan trim)
             // Sistem mengizinkan periode yang sama selama divisi berbeda
             $jadwal = $allJadwal->first(function ($j) use ($kuota) {
@@ -59,11 +60,27 @@ class DashboardController extends Controller
             });
             
             if ($jadwal) {
-                // Lowongan tersedia hanya jika jadwal sudah dimulai dan belum berakhir
-                return $jadwal->tgl_mulai <= $today && $jadwal->tgl_selesai >= $today;
+                // Tampilkan jika jadwal belum berakhir (tgl_selesai >= today)
+                // Ini termasuk jadwal yang akan datang (tgl_mulai > today) dan jadwal aktif (tgl_mulai <= today)
+                return $jadwal->tgl_selesai >= $today;
             }
             return false;
-        })->count() > 0;
+        });
+        
+        $lowonganTersedia = $lowonganTersediaList->count() > 0;
+        $jumlahLowongan = $lowonganTersediaList->count();
+        
+        // Cek apakah ada jadwal yang akan datang
+        $adaJadwalAkanDatang = false;
+        if ($lowonganTersedia) {
+            $adaJadwalAkanDatang = $lowonganTersediaList->filter(function ($kuota) use ($allJadwal, $today) {
+                $jadwal = $allJadwal->first(function ($j) use ($kuota) {
+                    return trim(strtolower($j->periode)) === trim(strtolower($kuota->periode))
+                        && trim(strtolower($j->posisi ?? '')) === trim(strtolower($kuota->posisi ?? ''));
+                });
+                return $jadwal && $jadwal->tgl_mulai > $today;
+            })->count() > 0;
+        }
         
         // Action Items - Kondisi A: Belum Mengajukan
         $actionItem = null;
@@ -133,6 +150,8 @@ class DashboardController extends Controller
             'totalKebutuhan',
             'permohonanTerbaru',
             'lowonganTersedia',
+            'jumlahLowongan',
+            'adaJadwalAkanDatang',
             'actionItem',
             'actionItemType',
             'notifikasi'

@@ -103,6 +103,40 @@
         font-weight: 500;
         font-size: 14px;
         color: #374151;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .user-greeting::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+        pointer-events: none;
+      }
+      
+      .user-greeting:hover {
+        background: #F3F4F6;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      
+      .user-greeting:hover::before {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .user-greeting:active {
+        transform: translateY(0) scale(0.98);
       }
       
       .btn-logout {
@@ -114,13 +148,49 @@
         font-weight: 500;
         font-size: 14px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .btn-logout::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(239, 68, 68, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+        pointer-events: none;
       }
       
       .btn-logout:hover {
-        background: #F3F4F6;
-        color: #1F2937;
-        border-color: #D1D5DB;
+        background: #FEF2F2;
+        color: #DC2626;
+        border-color: #FCA5A5;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+      }
+      
+      .btn-logout:hover::after {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .btn-logout:active {
+        transform: translateY(0) scale(0.97);
+        background: #FEE2E2;
+      }
+      
+      @media (hover: none) and (pointer: coarse) {
+        .user-greeting:active,
+        .btn-logout:active {
+          transform: scale(0.95);
+        }
       }
       
       /* Content */
@@ -178,16 +248,130 @@
         text-decoration: none;
         font-weight: 700;
         font-size: 15px;
-        display: inline-block;
-        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .lowongan-banner-btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(37, 99, 235, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.5s ease, height 0.5s ease;
+        pointer-events: none;
       }
       
       .lowongan-banner-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         background: #F8FAFC;
+      }
+      
+      .lowongan-banner-btn:hover::after {
+        width: 300px;
+        height: 300px;
+      }
+      
+      .lowongan-banner-btn:active {
+        transform: translateY(0) scale(0.98);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+      
+      .lowongan-banner-btn svg,
+      .lowongan-banner-btn::after {
+        transition: transform 0.3s ease;
+      }
+      
+      .lowongan-banner-btn:hover svg {
+        transform: translateX(4px);
+      }
+      
+      @media (hover: none) and (pointer: coarse) {
+        .lowongan-banner-btn:active {
+          transform: scale(0.95);
+          background: #F3F4F6;
+        }
+      }
+      
+      /* Sidebar Navigation Animations */
+      .nav-item {
+        position: relative;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .nav-item::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 4px;
+        height: 0;
+        background: #2563EB;
+        border-radius: 0 4px 4px 0;
+        transform: translateY(-50%);
+        transition: height 0.3s ease;
+        z-index: 1;
+      }
+      
+      .nav-item::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+        pointer-events: none;
+      }
+      
+      .nav-item:hover::before {
+        height: 60%;
+      }
+      
+      .nav-item:hover::after {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .nav-item:active {
+        transform: translateX(2px) scale(0.98);
+      }
+      
+      .nav-item:hover .nav-icon {
+        transform: scale(1.1) rotate(5deg);
+        transition: transform 0.3s ease;
+      }
+      
+      .nav-item:active .nav-icon {
+        transform: scale(0.95) rotate(-2deg);
+      }
+      
+      .nav-item .nav-icon svg {
+        transition: transform 0.3s ease;
+      }
+      
+      @media (hover: none) and (pointer: coarse) {
+        .nav-item:active {
+          transform: scale(0.97);
+          background: #EFF6FF;
+        }
       }
       
       @media (max-width: 768px) {
@@ -298,6 +482,8 @@
         gap: 16px;
         position: relative;
         overflow: hidden;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
       }
       
       .quick-action-card::before {
@@ -313,14 +499,47 @@
         transition: transform 0.3s ease;
       }
       
+      .quick-action-card::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+        pointer-events: none;
+      }
+      
       .quick-action-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-4px) scale(1.02);
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
         border-color: #3B82F6;
       }
       
       .quick-action-card:hover::before {
         transform: scaleX(1);
+      }
+      
+      .quick-action-card:active {
+        transform: translateY(-2px) scale(0.98);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+      
+      .quick-action-card:active::after {
+        width: 300px;
+        height: 300px;
+        transition: width 0.3s ease, height 0.3s ease;
+      }
+      
+      /* Touch feedback untuk mobile */
+      @media (hover: none) and (pointer: coarse) {
+        .quick-action-card:active {
+          transform: scale(0.95);
+          background: #F9FAFB;
+        }
       }
       
       .quick-action-icon {
@@ -385,10 +604,34 @@
       
       .quick-action-card:hover .quick-action-icon {
         transform: scale(1.1) rotate(5deg);
+        animation: iconBounce 0.6s ease;
+      }
+      
+      .quick-action-card:active .quick-action-icon {
+        transform: scale(0.95) rotate(-2deg);
       }
       
       .quick-action-card:hover .quick-action-icon svg {
         color: #FFFFFF;
+        animation: iconPulse 0.6s ease;
+      }
+      
+      @keyframes iconBounce {
+        0%, 100% {
+          transform: scale(1.1) rotate(5deg);
+        }
+        50% {
+          transform: scale(1.15) rotate(8deg);
+        }
+      }
+      
+      @keyframes iconPulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
       }
       
       .quick-action-icon svg {
@@ -397,11 +640,30 @@
         transition: color 0.3s ease;
       }
       
+      .quick-action-content {
+        transition: transform 0.3s ease;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .quick-action-card:hover .quick-action-content {
+        transform: translateX(4px);
+      }
+      
+      .quick-action-card:active .quick-action-content {
+        transform: translateX(2px);
+      }
+      
       .quick-action-content h3 {
         font-size: 16px;
         font-weight: 700;
         color: #1F2937;
         margin: 0 0 6px;
+        transition: color 0.3s ease;
+      }
+      
+      .quick-action-card:hover .quick-action-content h3 {
+        color: #3B82F6;
       }
       
       .quick-action-content p {
@@ -409,6 +671,11 @@
         color: #6B7280;
         margin: 0;
         line-height: 1.5;
+        transition: color 0.3s ease;
+      }
+      
+      .quick-action-card:hover .quick-action-content p {
+        color: #4B5563;
       }
       
       /* Stats Grid */
@@ -602,6 +869,142 @@
         margin: 0 auto 40px;
         max-width: 550px;
         line-height: 1.8;
+      }
+      
+      /* Enhanced Empty State */
+      .empty-state-enhanced {
+        padding: 60px 24px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .empty-state-main {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+      
+      .empty-state-icon-wrapper {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 32px;
+        background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+        animation: float 3s ease-in-out infinite;
+      }
+      
+      .empty-icon-enhanced {
+        width: 64px;
+        height: 64px;
+        color: #2563EB;
+      }
+      
+      .empty-title-enhanced {
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #1F2937 0%, #4B5563 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 16px;
+        letter-spacing: -0.5px;
+      }
+      
+      .empty-desc-enhanced {
+        font-size: 16px;
+        color: #6B7280;
+        margin: 0 auto 32px;
+        max-width: 600px;
+        line-height: 1.8;
+      }
+      
+      .empty-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 32px;
+      }
+      
+      .btn-primary-enhanced {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 32px;
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        color: #FFFFFF;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+      }
+      
+      .btn-primary-enhanced:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+      }
+      
+      .btn-secondary-enhanced {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 32px;
+        background: #FFFFFF;
+        color: #3B82F6;
+        border: 2px solid #3B82F6;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease-out 0.3s both;
+      }
+      
+      .btn-secondary-enhanced:hover {
+        background: #3B82F6;
+        color: #FFFFFF;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+      }
+      
+      @media (max-width: 768px) {
+        .empty-state-enhanced {
+          padding: 40px 16px;
+        }
+        
+        .empty-state-icon-wrapper {
+          width: 100px;
+          height: 100px;
+        }
+        
+        .empty-icon-enhanced {
+          width: 52px;
+          height: 52px;
+        }
+        
+        .empty-title-enhanced {
+          font-size: 24px;
+        }
+        
+        .empty-desc-enhanced {
+          font-size: 15px;
+        }
+        
+        .empty-actions {
+          flex-direction: column;
+        }
+        
+        .btn-primary-enhanced,
+        .btn-secondary-enhanced {
+          width: 100%;
+          justify-content: center;
+        }
       }
       
       /* Buttons */
@@ -923,8 +1326,28 @@
             @if($lowonganTersedia)
               <div class="lowongan-banner">
                 <div class="lowongan-banner-content">
-                  <h3 class="lowongan-banner-title">Lowongan Magang Dibuka!</h3>
-                  <a href="{{ route('lowongan') }}" class="lowongan-banner-btn">Lihat Detail</a>
+                  <div style="flex: 1;">
+                    <h3 class="lowongan-banner-title">
+                      @if(isset($adaJadwalAkanDatang) && $adaJadwalAkanDatang)
+                        🎉 Lowongan Magang Tersedia!
+                      @else
+                        🎉 Lowongan Magang Dibuka!
+                      @endif
+                    </h3>
+                    <p style="color: rgba(255, 255, 255, 0.95); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">
+                      @if(isset($jumlahLowongan) && $jumlahLowongan > 0)
+                        Ada {{ $jumlahLowongan }} {{ $jumlahLowongan == 1 ? 'lowongan' : 'lowongan' }} yang tersedia untuk Anda.
+                      @else
+                        Ada lowongan magang yang tersedia untuk Anda.
+                      @endif
+                      @if(isset($adaJadwalAkanDatang) && $adaJadwalAkanDatang)
+                        <span style="display: block; margin-top: 4px; font-size: 14px; opacity: 0.9;">
+                          ⏰ Beberapa lowongan akan segera dibuka!
+                        </span>
+                      @endif
+                    </p>
+                  </div>
+                  <a href="{{ route('lowongan') }}" class="lowongan-banner-btn">Lihat Detail →</a>
                 </div>
               </div>
             @endif
@@ -1119,31 +1542,35 @@
                   </table>
                 </div>
               @else
-                <div class="empty-state">
-                  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/>
-                  </svg>
-                  <h3 class="empty-title">Belum ada lamaran</h3>
-                  <p class="empty-desc">
-                    Mulai perjalanan magang Anda dengan membuat permohonan baru. Kami siap membantu Anda mewujudkan impian magang di Balai Besar Standardisasi dan Pelayanan Jasa Kerajinan dan Batik Yogyakarta.
-                  </p>
-                  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                    <a href="{{ route('lowongan') }}" class="btn-primary" style="animation: fadeInUp 0.6s ease-out 0.2s both;">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <div class="empty-state-enhanced">
+                  <div class="empty-state-main">
+                    <div class="empty-state-icon-wrapper">
+                      <svg class="empty-icon-enhanced" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/>
                       </svg>
-                      Buat Permohonan Baru
-                    </a>
-                    @if($lowonganTersedia)
-                      <a href="{{ route('lowongan') }}" class="btn-secondary" style="animation: fadeInUp 0.6s ease-out 0.3s both;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </div>
+                    <h3 class="empty-title-enhanced">Belum Ada Lamaran</h3>
+                    <p class="empty-desc-enhanced">
+                      Mulai perjalanan magang Anda dengan membuat permohonan baru. Kami siap membantu Anda mewujudkan impian magang di Balai Besar Standardisasi dan Pelayanan Jasa Kerajinan dan Batik Yogyakarta.
+                    </p>
+                    <div class="empty-actions">
+                      <a href="{{ route('lowongan') }}" class="btn-primary-enhanced">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        Lihat Lowongan
+                        Buat Permohonan Baru
                       </a>
-                    @endif
+                      @if($lowonganTersedia)
+                        <a href="{{ route('lowongan') }}" class="btn-secondary-enhanced">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Lihat Lowongan Tersedia
+                        </a>
+                      @endif
+                    </div>
                   </div>
                 </div>
               @endif

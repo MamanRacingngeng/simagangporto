@@ -606,6 +606,16 @@
                     <p style="margin: 0; color: #991B1B; font-weight: 500;">
                       Permohonan Anda ditolak. Silakan lengkapi atau perbaiki dokumen Anda dan ajukan kembali.
                     </p>
+                    @if($permohonan->alasan_penolakan)
+                      <div style="margin-top: 12px; padding: 12px; background: #FFFFFF; border-radius: 6px;">
+                        <p style="margin: 0 0 6px; font-size: 13px; font-weight: 600; color: #991B1B;">
+                          Alasan Penolakan:
+                        </p>
+                        <p style="margin: 0; font-size: 13px; color: #7F1D1D; line-height: 1.6; white-space: pre-line;">
+                          {{ $permohonan->alasan_penolakan }}
+                        </p>
+                      </div>
+                    @endif
                   </div>
                 @endif
               </div>

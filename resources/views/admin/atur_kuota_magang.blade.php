@@ -5,24 +5,48 @@
 @section('content')
 <h1 style="margin:0 0 24px;font-size:28px;font-weight:700">Atur Kuota Magang</h1>
 
+<!-- Notification Banner Success -->
 @if(session('success'))
-    <div style="padding:16px;background:#d1fae5;border-left:4px solid #10b981;border-radius:8px;margin-bottom:24px;color:#065f46">
-        {{ session('success') }}
+    <div id="notification-success" class="notification-banner notification-success" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#d1fae5;border-left:4px solid #10b981;border-radius:8px;margin-bottom:24px;color:#065f46;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.3s ease;position:relative;overflow:hidden">
+        <div style="flex:1;display:flex;align-items:center;gap:12px">
+            <svg style="width:20px;height:20px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span style="font-size:14px;font-weight:500;line-height:1.5">{{ session('success') }}</span>
+        </div>
+        <button onclick="dismissNotification('notification-success')" style="background:transparent;border:none;color:#065f46;cursor:pointer;padding:4px 8px;margin-left:12px;border-radius:4px;transition:background 0.2s;flex-shrink:0;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(6,95,70,0.1)'" onmouseout="this.style.background='transparent'">
+            <svg style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
     </div>
 @endif
 
+<!-- Notification Banner Error -->
 @if(session('error') || $errors->any())
-    <div style="padding:16px;background:#fee2e2;border-left:4px solid #ef4444;border-radius:8px;margin-bottom:24px;color:#991b1b">
-        @if(session('error'))
-            <div>{{ session('error') }}</div>
-        @endif
-        @if($errors->any())
-            <ul style="margin:8px 0 0 0;padding-left:20px">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        @endif
+    <div id="notification-error" class="notification-banner notification-error" style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px;background:#fee2e2;border-left:4px solid #ef4444;border-radius:8px;margin-bottom:24px;color:#991b1b;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.3s ease;position:relative;overflow:hidden">
+        <div style="flex:1;display:flex;align-items:flex-start;gap:12px">
+            <svg style="width:20px;height:20px;flex-shrink:0;margin-top:2px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div style="flex:1">
+                @if(session('error'))
+                    <div style="font-size:14px;font-weight:500;line-height:1.5;margin-bottom:8px">{{ session('error') }}</div>
+                @endif
+                @if($errors->any())
+                    <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.6">
+                        @foreach($errors->all() as $error)
+                            <li style="margin-bottom:4px">{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </div>
+        <button onclick="dismissNotification('notification-error')" style="background:transparent;border:none;color:#991b1b;cursor:pointer;padding:4px 8px;margin-left:12px;border-radius:4px;transition:background 0.2s;flex-shrink:0;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(153,27,27,0.1)'" onmouseout="this.style.background='transparent'">
+            <svg style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
     </div>
 @endif
 
@@ -149,6 +173,38 @@
 </div>
 
 <script>
+// Notification Banner Functions
+function dismissNotification(notificationId) {
+    const notification = document.getElementById(notificationId);
+    if (notification) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-10px)';
+        notification.style.marginBottom = '0';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 300);
+    }
+}
+
+// Auto-dismiss notifications after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const successNotification = document.getElementById('notification-success');
+    const errorNotification = document.getElementById('notification-error');
+    
+    if (successNotification) {
+        setTimeout(() => {
+            dismissNotification('notification-success');
+        }, 5000);
+    }
+    
+    if (errorNotification) {
+        // Error notifications stay longer (8 seconds) as they're more important
+        setTimeout(() => {
+            dismissNotification('notification-error');
+        }, 8000);
+    }
+});
+
 function editKuota(id, periode, posisi, kuotaMax, kuotaTerpakai) {
     try {
         // Set form action menggunakan route helper

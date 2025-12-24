@@ -63,33 +63,192 @@
     @endauth
   </nav>
   
-  @php
-    // Cek apakah ada lowongan yang tersedia
-    // Lowongan muncul jika: kuota tersedia DAN jadwal sudah dibuat DAN jadwal sudah dimulai dan belum berakhir
-    $today = now()->toDateString();
-    $allKuota = \App\Models\KuotaMagang::whereColumn('kuota_terpakai', '<', 'kuota_max')->get();
-    $allJadwal = \App\Models\JadwalMagang::all();
-    
-    $lowonganAktifTersedia = $allKuota->filter(function ($kuota) use ($allJadwal, $today) {
-      // Cari jadwal dengan periode dan posisi yang sama (case-insensitive dan trim)
-      // Setiap divisi memiliki jadwal terpisah
-      $jadwal = $allJadwal->first(function ($j) use ($kuota) {
-        return trim(strtolower($j->periode)) === trim(strtolower($kuota->periode))
+  @auth
+    @php
+      // Cek apakah ada lowongan tersedia
+      $today = now()->toDateString();
+      $allKuota = \App\Models\KuotaMagang::whereColumn('kuota_terpakai', '<', 'kuota_max')->get();
+      $allJadwal = \App\Models\JadwalMagang::all();
+      
+      $lowonganTersediaList = $allKuota->filter(function ($kuota) use ($allJadwal, $today) {
+        $jadwal = $allJadwal->first(function ($j) use ($kuota) {
+          return trim(strtolower($j->periode)) === trim(strtolower($kuota->periode))
             && trim(strtolower($j->posisi ?? '')) === trim(strtolower($kuota->posisi ?? ''));
+        });
+        return $jadwal && $jadwal->tgl_selesai >= $today;
       });
       
-      if ($jadwal) {
-        // Lowongan tersedia hanya jika jadwal sudah dimulai dan belum berakhir
-        return $jadwal->tgl_mulai <= $today && $jadwal->tgl_selesai >= $today;
-      }
-      return false;
-    })->count() > 0;
-  @endphp
-  
-  @if($lowonganAktifTersedia)
-    <div class="cta">
-      <div class="cta-title">Lowongan Magang Dibuka!</div>
-      <a href="{{ route('lowongan') }}" class="btn-cta">Lihat Detail</a>
+      $lowonganTersedia = $lowonganTersediaList->count() > 0;
+      $jumlahLowongan = $lowonganTersediaList->count();
+      
+      // Cek notifikasi terbaru tentang lowongan
+      $notifikasiLowongan = \App\Models\Notifikasi::where('user_id', auth()->id())
+        ->where('tipe', 'success')
+        ->orderBy('created_at', 'desc')
+        ->first();
+    @endphp
+    
+    <!-- Sidebar Notification Card -->
+    <div class="sidebar-notification-wrapper">
+      @if($lowonganTersedia)
+        <div class="sidebar-notification-card">
+          <div class="sidebar-notification-content">
+            <h4 class="sidebar-notification-title">Lowongan Tersedia!</h4>
+            <p class="sidebar-notification-text">
+              @if($jumlahLowongan > 0)
+                Ada {{ $jumlahLowongan }} {{ $jumlahLowongan == 1 ? 'lowongan' : 'lowongan' }} yang bisa Anda lamar sekarang.
+              @else
+                Lowongan magang baru telah dibuka. Segera ajukan lamaran Anda!
+              @endif
+            </p>
+            <a href="{{ route('lowongan') }}" class="sidebar-notification-link">
+              Lihat Lowongan
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      @else
+        <div class="sidebar-notification-card">
+          <div class="sidebar-notification-content">
+            <h4 class="sidebar-notification-title">Belum Ada Lowongan</h4>
+            <p class="sidebar-notification-text">
+              Saat ini belum ada lowongan magang yang tersedia. Mohon bersabar, lowongan baru akan segera dibuka.
+            </p>
+            <div class="sidebar-notification-tip">
+              <span>Pantau dashboard secara berkala untuk update terbaru</span>
+            </div>
+          </div>
+        </div>
+      @endif
     </div>
-  @endif
+  @endauth
 </aside>
+
+<style>
+  .sidebar-notification-wrapper {
+    margin: 12px 10px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #E5E7EB;
+  }
+  
+  .sidebar-notification-card {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+    border: 1px solid #BFDBFE;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .sidebar-notification-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(90deg, #3B82F6, #2563EB, #1D4ED8);
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar-notification-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+    border-color: #93C5FD;
+    background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  }
+  
+  .sidebar-notification-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .sidebar-notification-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1E40AF;
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+    letter-spacing: -0.1px;
+  }
+  
+  .sidebar-notification-text {
+    font-size: 10px;
+    color: #475569;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+  }
+  
+  .sidebar-notification-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #2563EB;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 4px 8px;
+    background: #FFFFFF;
+    border-radius: 5px;
+    border: 1px solid #BFDBFE;
+  }
+  
+  .sidebar-notification-link:hover {
+    background: #3B82F6;
+    color: #FFFFFF;
+    border-color: #3B82F6;
+    transform: translateX(2px);
+  }
+  
+  .sidebar-notification-link svg {
+    width: 10px;
+    height: 10px;
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-notification-link:hover svg {
+    transform: translateX(2px);
+  }
+  
+  .sidebar-notification-tip {
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 5px;
+    margin-top: 8px;
+    border: 1px solid rgba(191, 219, 254, 0.5);
+  }
+  
+  .sidebar-notification-tip span {
+    font-size: 9px;
+    color: #475569;
+    line-height: 1.4;
+    display: block;
+  }
+  
+  @media (max-width: 1024px) {
+    .sidebar-notification-wrapper {
+      margin: 10px 8px;
+      padding-top: 10px;
+    }
+    
+    .sidebar-notification-card {
+      padding: 8px;
+    }
+    
+    .sidebar-notification-title {
+      font-size: 11px;
+    }
+    
+    .sidebar-notification-text {
+      font-size: 9px;
+    }
+    
+  }
+</style>

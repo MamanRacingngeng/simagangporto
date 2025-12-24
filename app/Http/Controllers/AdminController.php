@@ -521,9 +521,13 @@ class AdminController extends Controller
                 'kuota_max.min' => 'Kuota maksimal minimal 1.',
             ]);
 
-            // Validasi: kombinasi periode + posisi harus unique
-            $exists = KuotaMagang::where('periode', $request->periode)
-                ->where('posisi', $request->posisi)
+            // Normalisasi input: trim untuk menghindari masalah whitespace
+            $periode = trim($request->periode);
+            $posisi = trim($request->posisi);
+
+            // Validasi: kombinasi periode + posisi harus unique (case-insensitive comparison)
+            $exists = KuotaMagang::whereRaw('LOWER(TRIM(periode)) = ?', [strtolower($periode)])
+                ->whereRaw('LOWER(TRIM(posisi)) = ?', [strtolower($posisi)])
                 ->exists();
             
             if ($exists) {
@@ -533,8 +537,8 @@ class AdminController extends Controller
             }
 
             KuotaMagang::create([
-                'periode' => $request->periode, // Sesuai ERD: periode
-                'posisi' => $request->posisi, // Posisi/Departemen
+                'periode' => $periode, // Normalized: trimmed
+                'posisi' => $posisi, // Normalized: trimmed
                 'kuota_max' => $request->kuota_max, // Sesuai ERD: kuota_max
                 'kuota_terpakai' => 0, // Sesuai ERD: kuota_terpakai
             ]);
@@ -565,9 +569,14 @@ class AdminController extends Controller
                 'posisi.required' => 'Posisi/Departemen wajib diisi.',
             ]);
 
+            // Normalisasi input: trim untuk menghindari masalah whitespace
+            $periode = trim($request->periode);
+            $posisi = trim($request->posisi);
+
             // Validasi: kombinasi periode + posisi harus unique (kecuali untuk record yang sedang diupdate)
-            $exists = KuotaMagang::where('periode', $request->periode)
-                ->where('posisi', $request->posisi)
+            // Case-insensitive comparison untuk konsistensi dengan matching di user side
+            $exists = KuotaMagang::whereRaw('LOWER(TRIM(periode)) = ?', [strtolower($periode)])
+                ->whereRaw('LOWER(TRIM(posisi)) = ?', [strtolower($posisi)])
                 ->where('id', '!=', $id)
                 ->exists();
             
@@ -595,7 +604,13 @@ class AdminController extends Controller
                 ])->withInput();
             }
 
-            $kuota->update($request->only(['periode', 'posisi', 'kuota_max', 'kuota_terpakai']));
+            // Update dengan data yang sudah dinormalisasi
+            $kuota->update([
+                'periode' => $periode,
+                'posisi' => $posisi,
+                'kuota_max' => $request->kuota_max,
+                'kuota_terpakai' => $request->kuota_terpakai,
+            ]);
 
             return back()->with('success', 'Kuota magang berhasil diperbarui. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -653,9 +668,13 @@ class AdminController extends Controller
                 'tgl_selesai.after' => 'Tanggal selesai harus setelah tanggal mulai.',
             ]);
 
-            // Validasi: kombinasi periode + posisi harus unique
-            $exists = JadwalMagang::where('periode', $request->periode)
-                ->where('posisi', $request->posisi)
+            // Normalisasi input: trim untuk menghindari masalah whitespace
+            $periode = trim($request->periode);
+            $posisi = trim($request->posisi);
+
+            // Validasi: kombinasi periode + posisi harus unique (case-insensitive comparison)
+            $exists = JadwalMagang::whereRaw('LOWER(TRIM(periode)) = ?', [strtolower($periode)])
+                ->whereRaw('LOWER(TRIM(posisi)) = ?', [strtolower($posisi)])
                 ->exists();
             
             if ($exists) {
@@ -664,12 +683,12 @@ class AdminController extends Controller
                 ])->withInput();
             }
 
-            JadwalMagang::create($request->only([
-                'periode',
-                'posisi',
-                'tgl_mulai',
-                'tgl_selesai',
-            ]));
+            JadwalMagang::create([
+                'periode' => $periode, // Normalized: trimmed
+                'posisi' => $posisi, // Normalized: trimmed
+                'tgl_mulai' => $request->tgl_mulai,
+                'tgl_selesai' => $request->tgl_selesai,
+            ]);
 
             return back()->with('success', 'Jadwal magang berhasil ditambahkan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -698,9 +717,14 @@ class AdminController extends Controller
 
             $jadwal = JadwalMagang::findOrFail($id);
             
+            // Normalisasi input: trim untuk menghindari masalah whitespace
+            $periode = trim($request->periode);
+            $posisi = trim($request->posisi);
+            
             // Validasi: kombinasi periode + posisi harus unique (kecuali untuk record yang sedang diupdate)
-            $exists = JadwalMagang::where('periode', $request->periode)
-                ->where('posisi', $request->posisi)
+            // Case-insensitive comparison untuk konsistensi dengan matching di user side
+            $exists = JadwalMagang::whereRaw('LOWER(TRIM(periode)) = ?', [strtolower($periode)])
+                ->whereRaw('LOWER(TRIM(posisi)) = ?', [strtolower($posisi)])
                 ->where('id', '!=', $id)
                 ->exists();
             
@@ -710,12 +734,13 @@ class AdminController extends Controller
                 ])->withInput();
             }
             
-            $jadwal->update($request->only([
-                'periode',
-                'posisi',
-                'tgl_mulai',
-                'tgl_selesai',
-            ]));
+            // Update dengan data yang sudah dinormalisasi
+            $jadwal->update([
+                'periode' => $periode,
+                'posisi' => $posisi,
+                'tgl_mulai' => $request->tgl_mulai,
+                'tgl_selesai' => $request->tgl_selesai,
+            ]);
 
             return back()->with('success', 'Jadwal magang berhasil diperbarui. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Illuminate\Validation\ValidationException $e) {
