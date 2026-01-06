@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Galeri Magang - BBKB Yogyakarta</title>
+    {{-- OPTIMASI: Non-blocking font loading --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <style>
       :root { 
         --primary:#0C3A6B; 
@@ -53,60 +55,23 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-image: 
-          repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 50px,
-            rgba(251, 191, 36, 0.08) 50px,
-            rgba(251, 191, 36, 0.08) 100px
-          ),
-          repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 50px,
-            rgba(245, 158, 11, 0.06) 50px,
-            rgba(245, 158, 11, 0.06) 100px
-          ),
-          radial-gradient(
-            circle at 20% 30%,
-            rgba(254, 243, 199, 0.3) 0%,
-            transparent 50%
-          ),
-          radial-gradient(
-            circle at 80% 70%,
-            rgba(251, 191, 36, 0.2) 0%,
-            transparent 50%
-          );
+        /* OPTIMASI: Simplify gradient untuk performa lebih cepat */
+        background: radial-gradient(
+          circle at 20% 30%,
+          rgba(254, 243, 199, 0.2) 0%,
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 80% 70%,
+          rgba(251, 191, 36, 0.15) 0%,
+          transparent 50%
+        );
         pointer-events: none;
         z-index: 0;
+        will-change: transform;
+        transform: translateZ(0); /* GPU acceleration */
       }
-      body::after {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image: 
-          repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(217, 119, 6, 0.03) 2px,
-            rgba(217, 119, 6, 0.03) 4px
-          ),
-          repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 2px,
-            rgba(217, 119, 6, 0.03) 2px,
-            rgba(217, 119, 6, 0.03) 4px
-          );
-        pointer-events: none;
-        z-index: 0;
-        opacity: 0.4;
-      }
+      /* OPTIMASI: Hapus body::after untuk mengurangi beban render */
       /* Navbar Styling - Sama dengan halaman beranda */
       .gallery-navbar {
         background: #ffffff;
@@ -490,6 +455,11 @@
       }
       
       .gallery-item img {
+        /* OPTIMASI: GPU acceleration dan lazy loading optimization */
+        will-change: transform;
+        transform: translateZ(0);
+        /* OPTIMASI: Object-fit untuk faster rendering */
+        object-fit: cover;
         width: 100%;
         height: 260px;
         object-fit: cover;
@@ -625,7 +595,11 @@
           <div class="gallery-container">
             @forelse($galeri as $item)
               <div class="gallery-item" data-category="all">
-                <img src="{{ asset('storage/' . $item->foto) }}" alt="{{ $item->judul }}" onerror="this.src='https://via.placeholder.com/300x260?text=Image+Not+Found'">
+                <img src="{{ $item->foto_url ?? 'https://via.placeholder.com/300x260?text=Image+Not+Found' }}" 
+                     alt="{{ $item->judul }}" 
+                     loading="lazy" 
+                     decoding="async"
+                     onerror="this.src='https://via.placeholder.com/300x260?text=Image+Not+Found'">
                 <div class="gallery-item-info">
                   <h3 class="gallery-item-title">{{ $item->judul }}</h3>
                   @if($item->deskripsi)
@@ -646,18 +620,18 @@
     </section>
 
     <script>
-      // Smooth page transition without delay
+      // OPTIMASI: Remove fade-in untuk faster initial render
       (function() {
         // Store transition state
         let isTransitioning = false;
         
-        // Fade in on page load (smooth entry)
+        // OPTIMASI: Skip fade-in animation untuk performa lebih cepat
+        // OPTIMASI: Skip fade-in animation untuk faster initial render
         function fadeInOnLoad() {
-          document.body.style.opacity = '0';
-          requestAnimationFrame(() => {
-            document.body.style.transition = 'opacity 0.3s ease-in';
+          // Skip animation - langsung show content untuk performa lebih cepat
+          if (document.body) {
             document.body.style.opacity = '1';
-          });
+          }
         }
         
         // Handle page transitions for navigation links with modern effects

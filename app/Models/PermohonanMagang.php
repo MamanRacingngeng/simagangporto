@@ -17,10 +17,17 @@ class PermohonanMagang extends Model
         'tanggal_pengajuan', // Sesuai ERD: tanggal_pengajuan (date)
         'status', // Sesuai ERD: "Diajukan", "Diverifikasi", "Diterima", atau "Ditolak"
         'alasan_penolakan', // Alasan penolakan jika status = "Ditolak"
+        'catatan_revisi', // Catatan revisi saat admin meminta perbaikan (nullable)
+        'periode_backup', // Backup periode untuk riwayat meskipun kuota sudah dihapus
+        'posisi_backup', // Backup posisi untuk riwayat meskipun kuota sudah dihapus
+        'tgl_mulai_backup', // Backup tanggal mulai untuk riwayat meskipun jadwal sudah dihapus
+        'tgl_selesai_backup', // Backup tanggal selesai untuk riwayat meskipun jadwal sudah dihapus
     ];
 
     protected $casts = [
         'tanggal_pengajuan' => 'date',
+        'tgl_mulai_backup' => 'date',
+        'tgl_selesai_backup' => 'date',
     ];
 
     // Relationships
@@ -69,6 +76,8 @@ class PermohonanMagang extends Model
         $today = now()->toDateString();
         
         // Cek apakah ada permohonan dengan status 'Diajukan' atau 'Diverifikasi'
+        // Status 'Ditolak' dan 'Revisi' TIDAK memblokir pendaftaran ulang
+        // User dengan status 'Ditolak' bisa langsung mendaftar ulang
         $permohonanProses = self::where('user_id', $userId)
             ->whereIn('status', ['Diajukan', 'Diverifikasi'])
             ->first();
@@ -105,36 +114,11 @@ class PermohonanMagang extends Model
             }
         }
         
-        // Cek apakah ada permohonan dengan status 'Ditolak'
-        $permohonanDitolak = self::where('user_id', $userId)
-            ->where('status', 'Ditolak')
-            ->with(['kuotaMagang'])
-            ->orderBy('created_at', 'desc')
-            ->first();
+        // NOTE: Status 'Ditolak' dan 'Revisi' TIDAK memblokir pendaftaran ulang
+        // User dengan status 'Ditolak' bisa langsung mendaftar ulang tanpa perlu admin menghapus permohonan lama
+        // User dengan status 'Revisi' juga bisa mendaftar ulang jika ingin (meskipun disarankan untuk memperbaiki dokumen terlebih dahulu)
         
-        if ($permohonanDitolak) {
-            $kuotaList = $permohonanDitolak->kuotaMagang;
-            
-            foreach ($kuotaList as $kuota) {
-                // Load jadwal untuk cek masa berlaku
-                $jadwal = \App\Models\JadwalMagang::where('periode', $kuota->periode)
-                    ->where('posisi', $kuota->posisi)
-                    ->first();
-                
-                if ($jadwal) {
-                    // Jika masa berlaku belum habis (masih dalam periode yang sama), tidak bisa daftar
-                    if ($jadwal->tgl_selesai >= $today) {
-                        return [
-                            'bisa_daftar' => false,
-                            'alasan' => 'Anda sudah memiliki permohonan yang ditolak untuk periode ' . $kuota->periode . ' (Divisi: ' . $kuota->posisi . ') yang masih dalam masa berlaku hingga ' . $jadwal->tgl_selesai->format('d/m/Y') . '. Anda dapat mendaftar lagi setelah masa berlaku periode tersebut berakhir. Satu akun hanya dapat mendaftar untuk 1 divisi lowongan magang.'
-                        ];
-                    }
-                    // Jika masa berlaku sudah habis, boleh daftar lagi (tidak return false, lanjut ke return true di bawah)
-                }
-            }
-        }
-        
-        // Jika tidak ada permohonan aktif, atau permohonan ditolak dan masa berlaku sudah habis, boleh mendaftar
+        // Jika tidak ada permohonan aktif (Diajukan/Diverifikasi), atau permohonan ditolak/revisi, boleh mendaftar
         return [
             'bisa_daftar' => true,
             'alasan' => ''

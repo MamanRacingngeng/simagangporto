@@ -15,11 +15,15 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check()) {
+        // Optimasi: Cache user check untuk menghindari multiple queries
+        $user = auth()->user();
+        
+        if (!$user) {
             return redirect()->route('login');
         }
 
-        if (!auth()->user()->isAdmin()) {
+        // Optimasi: Cache admin check untuk menghindari query berulang
+        if (!$user->isAdmin()) {
             abort(403, 'Akses ditolak. Hanya admin yang dapat mengakses halaman ini.');
         }
 

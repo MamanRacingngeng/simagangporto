@@ -65,10 +65,17 @@
   
   @auth
     @php
-      // Cek apakah ada lowongan tersedia
+      // OPTIMASI: Gunakan cache untuk menghindari query setiap kali sidebar dimuat
+      // Data lowongan sudah di-cache di controller, gunakan data dari session atau cache
       $today = now()->toDateString();
-      $allKuota = \App\Models\KuotaMagang::whereColumn('kuota_terpakai', '<', 'kuota_max')->get();
-      $allJadwal = \App\Models\JadwalMagang::all();
+      $lowonganCacheKey = "sidebar_lowongan_{$today}";
+      
+      // Gunakan cache dengan durasi 5 menit untuk menghindari query berulang
+      $lowonganData = \Illuminate\Support\Facades\Cache::remember($lowonganCacheKey, 300, function () use ($today) {
+        $allKuota = \App\Models\KuotaMagang::whereColumn('kuota_terpakai', '<', 'kuota_max')
+          ->get(['id', 'periode', 'posisi', 'kuota_max', 'kuota_terpakai']);
+        $allJadwal = \App\Models\JadwalMagang::where('tgl_selesai', '>=', $today)
+          ->get(['id', 'periode', 'posisi', 'tgl_mulai', 'tgl_selesai']);
       
       $lowonganTersediaList = $allKuota->filter(function ($kuota) use ($allJadwal, $today) {
         $jadwal = $allJadwal->first(function ($j) use ($kuota) {
@@ -78,14 +85,14 @@
         return $jadwal && $jadwal->tgl_selesai >= $today;
       });
       
-      $lowonganTersedia = $lowonganTersediaList->count() > 0;
-      $jumlahLowongan = $lowonganTersediaList->count();
+        return [
+          'lowonganTersedia' => $lowonganTersediaList->count() > 0,
+          'jumlahLowongan' => $lowonganTersediaList->count(),
+        ];
+      });
       
-      // Cek notifikasi terbaru tentang lowongan
-      $notifikasiLowongan = \App\Models\Notifikasi::where('user_id', auth()->id())
-        ->where('tipe', 'success')
-        ->orderBy('created_at', 'desc')
-        ->first();
+      $lowonganTersedia = $lowonganData['lowonganTersedia'];
+      $jumlahLowongan = $lowonganData['jumlahLowongan'];
     @endphp
     
     <!-- Sidebar Notification Card -->
@@ -127,6 +134,169 @@
 </aside>
 
 <style>
+  /* Sidebar Navigation Hover Effects - Bar biru di kiri dan ripple effect */
+  .nav-item {
+    position: relative !important;
+    overflow: hidden !important;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: transform, background-color;
+  }
+  
+  .nav-item::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 4px;
+    height: 0;
+    background: #2563EB;
+    border-radius: 0 4px 4px 0;
+    transform: translateY(-50%);
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+  
+  .nav-item::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+  
+  .nav-item:hover::before {
+    height: 60% !important;
+  }
+  
+  .nav-item:hover::after {
+    width: 200px !important;
+    height: 200px !important;
+  }
+  
+  .nav-item:hover .nav-icon {
+    transform: scale(1.1) rotate(5deg) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  /* Instant feedback on click - smooth and responsive */
+  .nav-item:active {
+    transform: translateX(2px) scale(0.98) !important;
+    transition: transform 0.1s ease !important;
+  }
+  
+  /* Active state - Biru jelas dan elegan - ULTRA HIGH SPECIFICITY untuk override semua CSS lain */
+  /* Menggunakan multiple selectors dengan !important untuk memastikan override */
+  aside.sidebar nav.nav a.nav-item.active,
+  aside.sidebar .nav a.nav-item.active,
+  .sidebar nav.nav a.nav-item.active,
+  .sidebar .nav a.nav-item.active,
+  aside.sidebar .nav .nav-item.active,
+  .sidebar .nav .nav-item.active,
+  .nav-item.active {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+    transition: all 0.2s ease !important;
+    border-left: 4px solid #FFFFFF !important;
+    border-color: #FFFFFF !important;
+  }
+  
+  aside.sidebar nav.nav a.nav-item.active .nav-icon,
+  aside.sidebar .nav a.nav-item.active .nav-icon,
+  .sidebar nav.nav a.nav-item.active .nav-icon,
+  .sidebar .nav a.nav-item.active .nav-icon,
+  aside.sidebar .nav .nav-item.active .nav-icon,
+  .sidebar .nav .nav-item.active .nav-icon,
+  .nav-item.active .nav-icon,
+  .nav-item.active .nav-icon svg,
+  .nav-item.active svg {
+    color: #FFFFFF !important;
+    fill: none !important;
+    stroke: #FFFFFF !important;
+  }
+  
+  aside.sidebar nav.nav a.nav-item.active .nav-label,
+  aside.sidebar .nav a.nav-item.active .nav-label,
+  .sidebar nav.nav a.nav-item.active .nav-label,
+  .sidebar .nav a.nav-item.active .nav-label,
+  aside.sidebar .nav .nav-item.active .nav-label,
+  .sidebar .nav .nav-item.active .nav-label,
+  .nav-item.active .nav-label {
+    color: #FFFFFF !important;
+  }
+  
+  aside.sidebar nav.nav a.nav-item.active::before,
+  aside.sidebar .nav a.nav-item.active::before,
+  .sidebar nav.nav a.nav-item.active::before,
+  .sidebar .nav a.nav-item.active::before,
+  aside.sidebar .nav .nav-item.active::before,
+  .sidebar .nav .nav-item.active::before,
+  .nav-item.active::before {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+    height: 60% !important;
+    width: 4px !important;
+    opacity: 1 !important;
+    display: block !important;
+  }
+  
+  aside.sidebar nav.nav a.nav-item.active::after,
+  aside.sidebar .nav a.nav-item.active::after,
+  .sidebar nav.nav a.nav-item.active::after,
+  .sidebar .nav a.nav-item.active::after,
+  aside.sidebar .nav .nav-item.active::after,
+  .sidebar .nav .nav-item.active::after,
+  .nav-item.active::after {
+    display: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  
+  /* Override hover state untuk active item */
+  aside.sidebar nav.nav a.nav-item.active:hover,
+  aside.sidebar .nav a.nav-item.active:hover,
+  .sidebar nav.nav a.nav-item.active:hover,
+  .sidebar .nav a.nav-item.active:hover,
+  aside.sidebar .nav .nav-item.active:hover,
+  .sidebar .nav .nav-item.active:hover,
+  .nav-item.active:hover {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+  }
+  
+  aside.sidebar nav.nav a.nav-item.active:hover .nav-icon,
+  aside.sidebar .nav a.nav-item.active:hover .nav-icon,
+  .sidebar nav.nav a.nav-item.active:hover .nav-icon,
+  .sidebar .nav a.nav-item.active:hover .nav-icon,
+  aside.sidebar .nav .nav-item.active:hover .nav-icon,
+  .sidebar .nav .nav-item.active:hover .nav-icon,
+  .nav-item.active:hover .nav-icon,
+  .nav-item.active:hover .nav-icon svg {
+    color: #FFFFFF !important;
+    transform: none !important;
+    stroke: #FFFFFF !important;
+  }
+  
+  /* Optimize for performance */
+  .nav-item * {
+    pointer-events: none;
+  }
+  
+  .nav-item {
+    pointer-events: auto;
+  }
+  
   .sidebar-notification-wrapper {
     margin: 12px 10px;
     margin-top: auto;
@@ -250,5 +420,22 @@
       font-size: 9px;
     }
     
+  }
+  
+  /* FINAL OVERRIDE - Memastikan active state biru jelas untuk SEMUA halaman */
+  /* Style ini di-load terakhir untuk memastikan override semua CSS lain */
+  aside.sidebar a.nav-item.active,
+  .sidebar a.nav-item.active {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+  }
+  aside.sidebar a.nav-item.active *,
+  .sidebar a.nav-item.active * {
+    color: #FFFFFF !important;
+  }
+  aside.sidebar a.nav-item.active svg,
+  .sidebar a.nav-item.active svg {
+    stroke: #FFFFFF !important;
   }
 </style>

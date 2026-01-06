@@ -16,11 +16,15 @@ class UserOnlyMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check()) {
+        // Optimasi: Cache user check untuk menghindari multiple queries
+        $user = auth()->user();
+        
+        if (!$user) {
             return redirect()->route('login');
         }
 
-        if (auth()->user()->isAdmin()) {
+        // Optimasi: Cache admin check untuk menghindari query berulang
+        if ($user->isAdmin()) {
             // Admin yang mencoba akses route user akan di-redirect ke dashboard admin
             return redirect()->route('admin.dashboard')
                 ->with('error', 'Akses ditolak. Admin tidak dapat mengakses halaman user.');

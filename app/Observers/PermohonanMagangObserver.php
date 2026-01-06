@@ -6,6 +6,7 @@ use App\Models\PermohonanMagang;
 use App\Models\KuotaMagang;
 use App\Models\JadwalMagang;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\CacheHelper;
 
 class PermohonanMagangObserver
 {
@@ -16,6 +17,9 @@ class PermohonanMagangObserver
     {
         // Tidak perlu sinkronisasi saat dibuat karena status default adalah 'Diajukan'
         // Kuota akan terpakai hanya saat status menjadi 'Diterima'
+        
+        // Clear cache
+        CacheHelper::clearPermohonanCache($permohonanMagang->user_id);
     }
 
     /**
@@ -41,6 +45,9 @@ class PermohonanMagangObserver
         if ($statusLama === 'Diterima' && $statusBaru !== 'Diterima') {
             $this->decrementKuota($permohonanMagang);
         }
+        
+        // Clear cache when status changes
+        CacheHelper::clearPermohonanCache($permohonanMagang->user_id);
     }
 
     /**
@@ -119,6 +126,9 @@ class PermohonanMagangObserver
         if ($permohonanMagang->status === 'Diterima') {
             $this->decrementKuota($permohonanMagang);
         }
+        
+        // Clear cache
+        CacheHelper::clearPermohonanCache($permohonanMagang->user_id);
     }
 
     /**

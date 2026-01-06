@@ -122,6 +122,8 @@ Route::middleware(['auth', 'user'])->group(function () {
     Route::get('/lamaran', [DashboardController::class, 'lamaran'])->name('lamaran');
     Route::get('/riwayat-lamaran', [DashboardController::class, 'riwayatLamaran'])->name('riwayat.lamaran');
     Route::get('/panduan-onboarding', [DashboardController::class, 'panduanOnboarding'])->name('panduan.onboarding');
+    Route::get('/download/panduan-onboarding', [DashboardController::class, 'downloadPanduanOnboarding'])->name('download.panduan.onboarding');
+    Route::get('/download/sk', [DashboardController::class, 'downloadSK'])->name('download.sk');
     Route::get('/profil', [DashboardController::class, 'profil'])->name('profil');
     Route::post('/profil', [DashboardController::class, 'updateProfil'])->name('profil.update');
     
@@ -173,10 +175,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/atur-kuota-magang/{id}', [AdminController::class, 'updateKuotaMagang'])->name('update_kuota_magang');
     Route::delete('/atur-kuota-magang/{id}', [AdminController::class, 'deleteKuotaMagang'])->name('delete_kuota_magang');
 
-    // Notifikasi Kekurangan Syarat
-    Route::get('/notifikasi-kekurangan-syarat', [AdminController::class, 'notifikasiKekuranganSyarat'])->name('notifikasi_kekurangan_syarat');
-    Route::get('/kirim-notifikasi/{id?}', [AdminController::class, 'kirimNotifikasi'])->name('kirim_notifikasi');
-    Route::post('/kirim-notifikasi', [AdminController::class, 'storeNotifikasi'])->name('store_notifikasi');
+    // Kirim Revisi (menggantikan menu Notifikasi)
+    Route::get('/kirim-revisi/{id?}', [AdminController::class, 'kirimRevisi'])->name('kirim_revisi');
+    Route::post('/kirim-revisi', [AdminController::class, 'storeRevisi'])->name('store_revisi');
+    Route::get('/api/permohonan-user/{userId}', [AdminController::class, 'getPermohonanByUser'])->name('api.permohonan_user');
+    
+    // Upload Surat Kerja (SK) untuk peserta yang diterima
+    Route::post('/upload-sk/{id}', [AdminController::class, 'uploadSK'])->name('upload_sk');
     
     // Pengawasan Sumber Daya
     Route::get('/pengawasan-sumber-daya', [AdminController::class, 'pengawasanSumberDaya'])->name('pengawasan_sumber_daya');

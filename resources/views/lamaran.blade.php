@@ -4,10 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Lamaran Saya - Magang Digital</title>
+    {{-- Resource Hints untuk performa lebih cepat --}}
+    <link rel="dns-prefetch" href="{{ url('/') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+    {{-- Font loading optimasi - non-blocking --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    {{-- CSS dengan preload untuk faster rendering --}}
+    <link rel="preload" href="{{ asset('css/dashboard.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ asset('css/dashboard.css') }}"></noscript>
+    {{-- JS dengan defer untuk non-blocking --}}
     <script src="{{ asset('js/dashboard.js') }}" defer></script>
     <style>
       * { 
@@ -509,8 +516,9 @@
                 <div style="flex: 1;">
                   <div>{{ session('success') }}</div>
                   @php
+                    // Data sudah di-pass dari controller, tidak perlu query lagi
                     $user = auth()->user();
-                    $permohonanCount = \App\Models\PermohonanMagang::where('user_id', $user->id)->count();
+                    $permohonanCount = isset($permohonan) && $permohonan ? 1 : 0;
                   @endphp
                   @if($permohonanCount > 0)
                     <div style="margin-top: 12px;">
@@ -552,8 +560,8 @@
               </div>
             @endif
 
-            @if($permohonan)
-              <!-- Detail Permohonan -->
+            @if($permohonan && in_array($permohonan->status, ['Diajukan', 'Diverifikasi', 'Revisi']))
+              <!-- Detail Permohonan Aktif -->
               <div class="info-card">
                 <div class="info-card-header">
                   <h2 class="info-card-title">Detail Permohonan</h2>
@@ -570,25 +578,45 @@
                     </span>
                   </div>
                   
-                  @if($permohonan->kuotaMagang->count() > 0)
-                    @php
+                  @php
+                    // Gunakan backup data jika kuota sudah dihapus
+                    $periode = null;
+                    $tglMulai = null;
+                    $tglSelesai = null;
+                    
+                    if ($permohonan->kuotaMagang->count() > 0) {
                       $kuota = $permohonan->kuotaMagang->first();
-                      $jadwal = $kuota->jadwalMagang;
-                    @endphp
+                      $periode = $kuota->periode ?? null;
+                      $jadwal = $kuota->jadwalMagang ?? null;
+                      if ($jadwal) {
+                        $tglMulai = $jadwal->tgl_mulai ?? null;
+                        $tglSelesai = $jadwal->tgl_selesai ?? null;
+                      }
+                    } else {
+                      // Gunakan backup data jika kuota sudah dihapus
+                      $periode = $permohonan->periode_backup ?? null;
+                      $tglMulai = $permohonan->tgl_mulai_backup ?? null;
+                      $tglSelesai = $permohonan->tgl_selesai_backup ?? null;
+                    }
+                  @endphp
+                  
+                  @if($periode)
                     <div class="info-item">
                       <span class="info-label">Periode Magang</span>
-                      <span class="info-value">{{ $kuota->periode }}</span>
+                      <span class="info-value">{{ $periode }}</span>
                     </div>
                     
-                    @if($jadwal)
+                    @if($tglMulai)
                       <div class="info-item">
                         <span class="info-label">Tanggal Mulai</span>
-                        <span class="info-value">{{ $jadwal->tgl_mulai->format('d F Y') }}</span>
+                        <span class="info-value">{{ \Carbon\Carbon::parse($tglMulai)->format('d F Y') }}</span>
                       </div>
-                      
+                    @endif
+                    
+                    @if($tglSelesai)
                       <div class="info-item">
                         <span class="info-label">Tanggal Selesai</span>
-                        <span class="info-value">{{ $jadwal->tgl_selesai->format('d F Y') }}</span>
+                        <span class="info-value">{{ \Carbon\Carbon::parse($tglSelesai)->format('d F Y') }}</span>
                       </div>
                     @endif
                   @endif
@@ -618,11 +646,28 @@
                     @endif
                   </div>
                 @endif
+                  @if($permohonan->status === 'Revisi')
+                    <div style="margin-top: 20px; padding: 16px; background: #FEF7ED; border-radius: 8px; border-left: 4px solid #F59E0B;">
+                      <p style="margin: 0; color: #92400E; font-weight: 600;">
+                        Permohonan Anda membutuhkan revisi. Silakan perbaiki dokumen sesuai instruksi di bawah dan unggah ulang.
+                      </p>
+                      @if($permohonan->catatan_revisi)
+                        <div style="margin-top: 12px; padding: 12px; background: #FFFFFF; border-radius: 6px;">
+                          <p style="margin: 0 0 6px; font-size: 13px; font-weight: 600; color: #92400E;">
+                            Instruksi Revisi:
+                          </p>
+                          <p style="margin: 0; font-size: 13px; color: #7A4B16; line-height: 1.6; white-space: pre-line;">
+                            {{ $permohonan->catatan_revisi }}
+                          </p>
+                        </div>
+                      @endif
+                    </div>
+                  @endif
               </div>
             @endif
 
-            <!-- Draft Dokumen Terunggah (Pengecekan Sebelum Dikirim) -->
-            @if(!$permohonan && $dokumen)
+            <!-- Dokumen Terunggah (Ditampilkan setelah upload) -->
+            @if($dokumen)
               @php
                 // Cek dokumen yang sudah terunggah
                 $dokumenTerunggah = [];
@@ -638,7 +683,7 @@
                 $dokumenLengkap = count($dokumenTerunggah) === 3;
               @endphp
               
-              @if(count($dokumenTerunggah) > 0 && !session('dokumen_baru_diunggah'))
+              @if(count($dokumenTerunggah) > 0)
                 <div class="document-section" style="background: #EFF6FF; border: 2px solid #3B82F6; margin-bottom: 32px;">
                   <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
                     <div style="width: 48px; height: 48px; border-radius: 12px; background: #DBEAFE; display: flex; align-items: center; justify-content: center;">
@@ -648,9 +693,19 @@
                       </svg>
                     </div>
                     <div style="flex: 1;">
-                      <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: #1E40AF;">Draft Dokumen Terunggah</h2>
+                      <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: #1E40AF;">
+                        @if(isset($permohonan) && $permohonan)
+                          Dokumen Terunggah
+                        @else
+                          Draft Dokumen Terunggah
+                        @endif
+                      </h2>
                       <p style="margin: 0; font-size: 14px; color: #1E40AF; opacity: 0.9;">
-                        Periksa dokumen Anda sebelum mengajukan permohonan. Pastikan semua dokumen sudah lengkap dan benar.
+                        @if(isset($permohonan) && $permohonan)
+                          Dokumen yang telah Anda unggah untuk permohonan ini.
+                        @else
+                          Periksa dokumen Anda sebelum mengajukan permohonan. Pastikan semua dokumen sudah lengkap dan benar.
+                        @endif
                       </p>
                     </div>
                     @if($dokumenLengkap)
@@ -668,7 +723,7 @@
                     <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600; color: #1F2937;">Dokumen yang Terunggah</h3>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                       @foreach($dokumenTerunggah as $doc)
-                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #F0FDF4; border-radius: 8px; border: 1px solid #10B981;">
+                        <div class="uploaded-doc-item" data-doc-field="{{ $doc['field'] }}" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #F0FDF4; border-radius: 8px; border: 1px solid #10B981;">
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M20 6L9 17l-5-5" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
@@ -688,16 +743,16 @@
                                 Lihat
                               </a>
                             @endif
-                            <form action="{{ route('pendaftar.delete_dokumen_field', ['id' => $dokumen->id, 'field' => $doc['field']]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin menghapus {{ $doc['nama'] }}? Dokumen ini akan dihapus dan Anda perlu mengunggah ulang.')">
-                              @csrf
-                              @method('DELETE')
-                              <button type="submit" style="padding: 6px 12px; background: #EF4444; color: #FFFFFF; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#DC2626'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#EF4444'; this.style.transform='translateY(0)'">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Hapus
-                              </button>
-                            </form>
+                                  <form action="{{ route('pendaftar.delete_dokumen_field', ['id' => $dokumen->id, 'field' => $doc['field']]) }}" method="POST" style="display: inline;" class="ajax-delete" data-confirm="Yakin ingin menghapus {{ $doc['nama'] }}? Dokumen ini akan dihapus dan Anda perlu mengunggah ulang.">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" style="padding: 6px 12px; background: #EF4444; color: #FFFFFF; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#DC2626'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#EF4444'; this.style.transform='translateY(0)'">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                      </svg>
+                                      Hapus
+                                    </button>
+                                  </form>
                           </div>
                         </div>
                       @endforeach
@@ -711,9 +766,11 @@
                     
                     @if($dokumenLengkap)
                       @php
-                        // Cek apakah ada lowongan aktif yang tersedia
+                        // OPTIMASI: Gunakan cache untuk menghindari query setiap kali
                         $today = now()->toDateString();
-                        $lowonganAktif = \App\Models\KuotaMagang::with('jadwalMagang')
+                        $lowonganCacheKey = "lamaran_lowongan_{$today}";
+                        $lowonganAktif = \Illuminate\Support\Facades\Cache::remember($lowonganCacheKey, 300, function () use ($today) {
+                          return \App\Models\KuotaMagang::with('jadwalMagang')
                           ->whereColumn('kuota_terpakai', '<', 'kuota_max')
                           ->get()
                           ->filter(function ($kuota) use ($today) {
@@ -721,6 +778,7 @@
                             return $jadwal && $jadwal->tgl_mulai <= $today && $jadwal->tgl_selesai >= $today;
                           })
                           ->first();
+                        });
                       @endphp
                       
                       <div style="margin-top: 20px; padding: 16px; background: #D1FAE5; border-radius: 8px; border-left: 4px solid #10B981;">
@@ -782,9 +840,19 @@
               
               <!-- Form Upload Dokumen -->
               <div class="upload-form">
-                <h3 class="upload-form-title">Unggah atau Perbarui Dokumen</h3>
+                <h3 class="upload-form-title">
+                  @if(isset($permohonan) && $permohonan->status === 'Revisi')
+                    🔄 Perbaiki dan Unggah Ulang Dokumen
+                  @else
+                    Unggah atau Perbarui Dokumen
+                  @endif
+                </h3>
                 <p class="upload-form-desc">
-                  Unggah dokumen wajib: CV, Surat Pengantar, dan Proposal. Format file: PDF, DOC, atau DOCX (maks. 5MB per file).
+                  @if(isset($permohonan) && $permohonan->status === 'Revisi')
+                    <strong style="color: #F59E0B;">Status: REVISI</strong> — Silakan perbaiki dokumen sesuai instruksi di atas dan unggah ulang. Setelah dokumen diperbaiki dan diunggah ulang, status akan otomatis kembali menjadi "Diajukan" untuk verifikasi ulang.
+                  @else
+                    Unggah dokumen wajib: CV, Surat Pengantar, dan Proposal. Format file: PDF, DOC, atau DOCX (maks. 5MB per file).
+                  @endif
                 </p>
                 
                 <form action="{{ route('pendaftar.store_dokumen') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
@@ -792,7 +860,7 @@
                   
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px;">
                     <div class="file-input-wrapper">
-                      <input type="file" name="cv" id="cv" accept=".pdf,.doc,.docx" class="file-input" required onchange="handleFileSelect('cv', this)">
+                      <input type="file" name="cv" id="cv" accept=".pdf,.doc,.docx" class="file-input" onchange="handleFileSelect('cv', this)">
                       <label for="cv" class="file-input-label">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -804,7 +872,7 @@
                     </div>
                     
                     <div class="file-input-wrapper">
-                      <input type="file" name="surat_pengantar" id="surat_pengantar" accept=".pdf,.doc,.docx" class="file-input" required onchange="handleFileSelect('surat_pengantar', this)">
+                      <input type="file" name="surat_pengantar" id="surat_pengantar" accept=".pdf,.doc,.docx" class="file-input" onchange="handleFileSelect('surat_pengantar', this)">
                       <label for="surat_pengantar" class="file-input-label">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -816,7 +884,7 @@
                     </div>
                     
                     <div class="file-input-wrapper">
-                      <input type="file" name="proposal" id="proposal" accept=".pdf,.doc,.docx" class="file-input" required onchange="handleFileSelect('proposal', this)">
+                      <input type="file" name="proposal" id="proposal" accept=".pdf,.doc,.docx" class="file-input" onchange="handleFileSelect('proposal', this)">
                       <label for="proposal" class="file-input-label">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -854,22 +922,50 @@
               </div>
             </div>
 
-            @if(!$permohonan)
+            @if(!$permohonan || !in_array($permohonan->status ?? '', ['Diajukan', 'Diverifikasi', 'Revisi']))
               <div class="empty-state">
                 <svg class="empty-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <h3 class="empty-title">Belum Ada Permohonan</h3>
+                <h3 class="empty-title">
+                  @php
+                    $allPermohonan = \App\Models\PermohonanMagang::where('user_id', auth()->id())
+                      ->whereIn('status', ['Diterima', 'Ditolak'])
+                      ->orderBy('created_at', 'desc')
+                      ->first();
+                  @endphp
+                  @if($allPermohonan)
+                    Permohonan Sudah Final
+                  @else
+                    Belum Ada Permohonan Aktif
+                  @endif
+                </h3>
                 <p class="empty-desc">
-                  Anda belum mengajukan permohonan magang. Lengkapi dokumen terlebih dahulu, kemudian ajukan permohonan di halaman Lowongan.
+                  @if($allPermohonan)
+                    Permohonan Anda sudah selesai ({{ $allPermohonan->status }}). Lihat detail lengkap dan riwayat semua permohonan di menu <strong>Status Lamaran</strong>.
+                  @else
+                    Anda belum mengajukan permohonan magang. Lengkapi dokumen terlebih dahulu, kemudian ajukan permohonan di halaman Lowongan.
+                  @endif
                 </p>
-                <a href="{{ route('lowongan') }}" class="btn-primary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Lihat Lowongan
-                </a>
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                  @if($allPermohonan)
+                    <a href="{{ route('riwayat.lamaran') }}" class="btn-primary">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Lihat Riwayat Lamaran
+                    </a>
+                  @else
+                    <a href="{{ route('lowongan') }}" class="btn-primary">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Lihat Lowongan
+                    </a>
+                  @endif
+                </div>
               </div>
             @endif
           </section>
@@ -877,19 +973,65 @@
       </main>
     </div>
     
+    <style>
+      /* Simple toast/snackbar */
+      .toast-container {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .toast {
+        min-width: 240px;
+        max-width: 360px;
+        background: #111827;
+        color: #fff;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(15,23,42,0.2);
+        opacity: 0;
+        transform: translateY(8px);
+        transition: all 220ms ease;
+        pointer-events: auto;
+        font-size: 14px;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .toast.success { background: #10B981; color: #04240f; }
+      .toast.error { background: #EF4444; color: #fff; }
+    </style>
+
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
     <script>
-      const selectedFiles = {
-        cv: null,
-        surat_pengantar: null,
-        proposal: null
+      // Toast helper
+      window.showToast = function(message, type = 'success', timeout = 3500) {
+        const container = document.getElementById('toastContainer');
+        if (!container) {
+          console.log(message);
+          return;
+        }
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + (type === 'error' ? 'error' : 'success');
+        toast.textContent = message;
+        container.appendChild(toast);
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 300);
+        }, timeout);
       };
-      
-      const fileLabels = {
-        cv: 'CV (Curriculum Vitae)',
-        surat_pengantar: 'Surat Pengantar',
-        proposal: 'Proposal'
-      };
-      
+
+      const selectedFiles = { cv: null, surat_pengantar: null, proposal: null };
+      const fileLabels = { cv: 'CV (Curriculum Vitae)', surat_pengantar: 'Surat Pengantar', proposal: 'Proposal' };
+
       function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -897,33 +1039,27 @@
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
       }
-      
+
       function handleFileSelect(type, input) {
         const file = input.files[0];
         if (file) {
-          // Validasi ukuran file (5MB = 5 * 1024 * 1024 bytes)
           const maxSize = 5 * 1024 * 1024;
           if (file.size > maxSize) {
-            alert(`File ${fileLabels[type]} terlalu besar! Ukuran maksimal adalah 5MB. File Anda: ${formatFileSize(file.size)}`);
+            showToast(`File ${fileLabels[type]} terlalu besar! Ukuran maksimal adalah 5MB. File Anda: ${formatFileSize(file.size)}`, 'error');
             input.value = '';
             selectedFiles[type] = null;
             updatePreview();
             return;
           }
-          
-          // Validasi tipe file
-          const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
           const fileExtension = file.name.split('.').pop().toLowerCase();
           const allowedExtensions = ['pdf', 'doc', 'docx'];
-          
           if (!allowedExtensions.includes(fileExtension)) {
-            alert(`Format file ${fileLabels[type]} tidak valid! Hanya PDF, DOC, atau DOCX yang diperbolehkan.`);
+            showToast(`Format file ${fileLabels[type]} tidak valid! Hanya PDF, DOC, atau DOCX yang diperbolehkan.`, 'error');
             input.value = '';
             selectedFiles[type] = null;
             updatePreview();
             return;
           }
-          
           selectedFiles[type] = file;
           updatePreview();
         } else {
@@ -931,147 +1067,328 @@
           updatePreview();
         }
       }
-      
+
       function updatePreview() {
         const previewDiv = document.getElementById('filePreview');
         const previewList = document.getElementById('filePreviewList');
         const submitBtn = document.getElementById('submitBtn');
-        
-        // Cek apakah ada file yang dipilih
         const hasFiles = Object.values(selectedFiles).some(file => file !== null);
-        
         if (hasFiles) {
           previewDiv.style.display = 'block';
           previewList.innerHTML = '';
-          
-          // Tampilkan preview untuk setiap file yang dipilih
           Object.keys(selectedFiles).forEach(type => {
             const file = selectedFiles[type];
             if (file) {
               const fileItem = document.createElement('div');
               fileItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #FFFFFF; border-radius: 8px; border: 1px solid #E5E7EB;';
-              
               const fileInfo = document.createElement('div');
               fileInfo.style.cssText = 'display: flex; align-items: center; gap: 12px; flex: 1;';
-              
-              // Icon file
               const icon = document.createElement('div');
-              icon.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #3B82F6;">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              `;
-              
-              // Info file
+              icon.innerHTML = `\n                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #3B82F6;">\n                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n                  <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n                </svg>\n              `;
               const info = document.createElement('div');
               info.style.cssText = 'flex: 1; min-width: 0;';
-              
               const fileName = document.createElement('div');
               fileName.style.cssText = 'font-weight: 600; color: #1F2937; font-size: 14px; margin-bottom: 4px; word-break: break-all;';
               fileName.textContent = fileLabels[type];
-              
               const fileDetails = document.createElement('div');
               fileDetails.style.cssText = 'font-size: 12px; color: #6B7280; display: flex; align-items: center; gap: 8px;';
-              fileDetails.innerHTML = `
-                <span>${file.name}</span>
-                <span>•</span>
-                <span>${formatFileSize(file.size)}</span>
-              `;
-              
+              fileDetails.innerHTML = `\n                <span>${file.name}</span>\n                <span>•</span>\n                <span>${formatFileSize(file.size)}</span>\n              `;
               info.appendChild(fileName);
               info.appendChild(fileDetails);
-              
-              // Tombol hapus
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button';
               removeBtn.style.cssText = 'padding: 6px; background: #FEE2E2; border: none; border-radius: 6px; cursor: pointer; color: #EF4444; display: flex; align-items: center; justify-content: center; transition: background 0.2s;';
-              removeBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              `;
-              removeBtn.onclick = function() {
-                document.getElementById(type).value = '';
-                selectedFiles[type] = null;
-                updatePreview();
-              };
-              removeBtn.onmouseover = function() {
-                this.style.background = '#FECACA';
-              };
-              removeBtn.onmouseout = function() {
-                this.style.background = '#FEE2E2';
-              };
-              
+              removeBtn.innerHTML = `\n                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n                </svg>\n              `;
+              removeBtn.onclick = function() { document.getElementById(type).value = ''; selectedFiles[type] = null; updatePreview(); };
+              removeBtn.onmouseover = function() { this.style.background = '#FECACA'; };
+              removeBtn.onmouseout = function() { this.style.background = '#FEE2E2'; };
               fileInfo.appendChild(icon);
               fileInfo.appendChild(info);
               fileItem.appendChild(fileInfo);
               fileItem.appendChild(removeBtn);
-              
               previewList.appendChild(fileItem);
             }
           });
-          
-          // Update label tombol submit
           const allFilesSelected = Object.values(selectedFiles).every(file => file !== null);
           if (allFilesSelected) {
-            submitBtn.innerHTML = `
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Unggah Dokumen (3 file siap)
-            `;
+            submitBtn.innerHTML = `\n              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n              </svg>\n              Unggah Dokumen (3 file siap)\n            `;
           } else {
             const count = Object.values(selectedFiles).filter(file => file !== null).length;
-            submitBtn.innerHTML = `
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Unggah Dokumen (${count}/3 file dipilih)
-            `;
+            submitBtn.innerHTML = `\n              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n                <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n              </svg>\n              Unggah Dokumen (${count}/3 file dipilih)\n            `;
           }
         } else {
           previewDiv.style.display = 'none';
-          submitBtn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Unggah Dokumen
-          `;
+          submitBtn.innerHTML = `\n            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\n              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n              <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n              <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n            </svg>\n            Unggah Dokumen\n          `;
         }
       }
-      
-      // Validasi sebelum submit
-      document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        const allFilesSelected = Object.values(selectedFiles).every(file => file !== null);
-        if (!allFilesSelected) {
-          e.preventDefault();
-          alert('Harap pilih semua dokumen (CV, Surat Pengantar, dan Proposal) sebelum mengunggah.');
-          return false;
-        }
+
+      // Upload handler (AJAX)
+      (function() {
+        const form = document.getElementById('uploadForm');
+        if (!form) return;
         
-        // Validasi ulang ukuran file
-        let hasError = false;
-        Object.keys(selectedFiles).forEach(type => {
-          const file = selectedFiles[type];
-          if (file) {
-            const maxSize = 5 * 1024 * 1024;
-            if (file.size > maxSize) {
-              hasError = true;
-              alert(`File ${fileLabels[type]} terlalu besar! Ukuran maksimal adalah 5MB.`);
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const hasFiles = Object.values(selectedFiles).some(f => f !== null);
+          if (!hasFiles) {
+            showToast('Pilih setidaknya satu dokumen untuk diunggah.', 'error');
+            return;
+          }
+          for (const type of Object.keys(selectedFiles)) {
+            const file = selectedFiles[type];
+            if (file && file.size > 5 * 1024 * 1024) {
+              showToast(`File ${fileLabels[type]} terlalu besar! Ukuran maksimal 5MB.`, 'error');
+              return;
             }
           }
+          
+          // Disable submit button and show loading
+          const submitBtn = document.getElementById('submitBtn');
+          const originalBtnText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Mengunggah...';
+          
+          const url = form.action;
+          const formData = new FormData();
+          const tokenEl = form.querySelector('input[name="_token"]');
+          const csrfToken = tokenEl ? tokenEl.value : null;
+          if (selectedFiles.cv) formData.append('cv', selectedFiles.cv);
+          if (selectedFiles.surat_pengantar) formData.append('surat_pengantar', selectedFiles.surat_pengantar);
+          if (selectedFiles.proposal) formData.append('proposal', selectedFiles.proposal);
+
+          fetch(url, {
+            method: 'POST',
+            headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+            credentials: 'same-origin',
+            body: formData,
+          }).then(r => {
+            if (!r.ok) {
+              return r.json().then(data => ({ success: false, message: data.message || 'Terjadi kesalahan saat mengunggah dokumen.' }));
+            }
+            return r.json();
+          }).then(data => {
+            if (data && data.success) {
+              // Reset file inputs and clear selected files
+              ['cv', 'surat_pengantar', 'proposal'].forEach(type => {
+                const input = document.getElementById(type);
+                if (input) {
+                  // Create a new input element to completely reset it
+                  const newInput = input.cloneNode(true);
+                  input.parentNode.replaceChild(newInput, input);
+                  // Re-attach event listener
+                  newInput.addEventListener('change', function() {
+                    handleFileSelect(type, this);
+                  });
+                  selectedFiles[type] = null;
+                }
+              });
+              
+              // Clear preview
+              updatePreview();
+              
+              // Reload only the document section with cache busting
+              const cacheBuster = '?t=' + Date.now();
+              fetch(window.location.href + cacheBuster, { 
+                credentials: 'same-origin', 
+                headers: { 
+                  'X-Requested-With': 'XMLHttpRequest', 
+                  'Accept': 'text/html',
+                  'Cache-Control': 'no-cache'
+                } 
+              })
+                .then(resp => resp.text())
+                .then(html => {
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, 'text/html');
+                  
+                  // Find the main content area
+                  const newContent = doc.querySelector('.content') || doc.querySelector('.main-content');
+                  const oldContent = document.querySelector('.content') || document.querySelector('.main-content');
+                  
+                  if (newContent && oldContent) {
+                    // Find the document section (draft dokumen terunggah) - look for the blue box
+                    const newDocSection = Array.from(newContent.querySelectorAll('.document-section')).find(section => {
+                      return section.style.backgroundColor === 'rgb(239, 246, 255)' || 
+                             section.getAttribute('style')?.includes('EFF6FF') ||
+                             section.getAttribute('style')?.includes('#EFF6FF');
+                    });
+                    
+                    const oldDocSection = Array.from(oldContent.querySelectorAll('.document-section')).find(section => {
+                      return section.style.backgroundColor === 'rgb(239, 246, 255)' || 
+                             section.getAttribute('style')?.includes('EFF6FF') ||
+                             section.getAttribute('style')?.includes('#EFF6FF');
+                    });
+                    
+                    if (newDocSection && oldDocSection) {
+                      // Replace the entire document section with animation
+                      oldDocSection.style.opacity = '0';
+                      oldDocSection.style.transform = 'translateY(-10px)';
+                      setTimeout(() => {
+                        oldDocSection.outerHTML = newDocSection.outerHTML;
+                        // Fade in the new section
+                        const insertedSection = document.querySelector('.document-section[style*="EFF6FF"]');
+                        if (insertedSection) {
+                          insertedSection.style.transition = 'opacity 0.3s, transform 0.3s';
+                          insertedSection.style.opacity = '0';
+                          setTimeout(() => {
+                            insertedSection.style.opacity = '1';
+                            insertedSection.style.transform = 'translateY(0)';
+                          }, 10);
+                        }
+                      }, 200);
+                    } else if (newDocSection && !oldDocSection) {
+                      // Section doesn't exist yet, insert it before the upload form
+                      const uploadSection = oldContent.querySelector('.document-section:not([style*="EFF6FF"])');
+                      if (uploadSection) {
+                        newDocSection.style.opacity = '0';
+                        uploadSection.parentNode.insertBefore(newDocSection, uploadSection);
+                        setTimeout(() => {
+                          newDocSection.style.transition = 'opacity 0.3s, transform 0.3s';
+                          newDocSection.style.opacity = '1';
+                          newDocSection.style.transform = 'translateY(0)';
+                        }, 10);
+                      }
+                    } else {
+                      // Fallback: update the entire content area
+                      oldContent.innerHTML = newContent.innerHTML;
+                    }
+                  }
+                  
+                  showToast(data.message || 'Dokumen berhasil diunggah.', 'success');
+                  
+                  // Re-enable submit button
+                  submitBtn.disabled = false;
+                  submitBtn.innerHTML = originalBtnText;
+                })
+                .catch(err => {
+                  console.error('Error reloading document section:', err);
+                  showToast('Dokumen berhasil diunggah, tetapi terjadi kesalahan saat memperbarui tampilan. Silakan refresh halaman.', 'success');
+                  submitBtn.disabled = false;
+                  submitBtn.innerHTML = originalBtnText;
+                });
+            } else {
+              showToast((data && data.message) || 'Terjadi kesalahan saat mengunggah dokumen.', 'error');
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalBtnText;
+            }
+          }).catch(err => {
+            console.error('Upload error:', err);
+            showToast('Terjadi kesalahan jaringan saat mengunggah dokumen. Silakan coba lagi.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+          });
         });
-        
-        if (hasError) {
+      })();
+      
+      // Add CSS for spinner animation
+      if (!document.querySelector('style[data-spinner]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-spinner', 'true');
+        style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+
+      // AJAX delete per-field
+      document.addEventListener('DOMContentLoaded', function() {
+        // Use event delegation for dynamically added forms
+        document.addEventListener('submit', function(e) {
+          const form = e.target.closest('form.ajax-delete');
+          if (!form) return;
+          
           e.preventDefault();
-          return false;
-        }
+          const confirmMsg = form.getAttribute('data-confirm') || 'Yakin ingin menghapus dokumen ini?';
+          if (!confirm(confirmMsg)) return;
+          
+          const url = form.action;
+          const tokenEl = form.querySelector('input[name="_token"]');
+          const csrfToken = tokenEl ? tokenEl.value : null;
+          const container = form.closest('.uploaded-doc-item');
+          const docSection = container ? container.closest('.document-section') : null;
+          const docListContainer = container ? container.parentElement : null;
+
+          // Show loading state
+          if (container) {
+            container.style.opacity = '0.5';
+            container.style.pointerEvents = 'none';
+          }
+
+          fetch(url, {
+            method: 'DELETE',
+            headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+            credentials: 'same-origin',
+          }).then(r => {
+            if (r.status === 200 || r.status === 204) return r.json().catch(() => ({ success: true }));
+            if (!r.ok) {
+              return r.json().then(data => ({ success: false, message: data.message || 'Terjadi kesalahan' }));
+            }
+            return r.json();
+          }).then(data => {
+            if (data && data.success) {
+              // Remove the deleted document item from DOM
+              if (container) {
+                container.style.transition = 'opacity 0.3s, transform 0.3s, height 0.3s, margin 0.3s';
+                container.style.opacity = '0';
+                container.style.transform = 'translateX(-20px)';
+                container.style.height = container.offsetHeight + 'px';
+                
+                setTimeout(() => {
+                  container.style.height = '0';
+                  container.style.margin = '0';
+                  container.style.padding = '0';
+                  
+                  setTimeout(() => {
+                    container.remove();
+                    
+                    // Update the "Belum Lengkap" badge if needed
+                    if (docListContainer) {
+                      const remainingDocs = docListContainer.querySelectorAll('.uploaded-doc-item').length;
+                      const badge = docSection ? docSection.querySelector('span[style*="FEF3C7"]') : null;
+                      if (badge && remainingDocs < 3) {
+                        badge.textContent = `⚠ Belum Lengkap (${remainingDocs}/3)`;
+                      }
+                      
+                      // If no documents left, hide the section or show empty state
+                      if (remainingDocs === 0) {
+                        const docSectionParent = docSection ? docSection.closest('.document-section') : null;
+                        if (docSectionParent) {
+                          const emptyState = docSectionParent.querySelector('.empty-state');
+                          if (!emptyState) {
+                            const emptyDiv = document.createElement('div');
+                            emptyDiv.className = 'empty-state';
+                            emptyDiv.style.cssText = 'text-align: center; padding: 24px; color: #6B7280;';
+                            emptyDiv.innerHTML = '<p>Tidak ada dokumen yang terunggah.</p>';
+                            docListContainer.appendChild(emptyDiv);
+                          }
+                        }
+                      }
+                    }
+                  }, 150);
+                }, 300);
+              }
+              
+              showToast((data && data.message) || 'Dokumen berhasil dihapus.', 'success');
+            } else {
+              // Restore container state on error
+              if (container) {
+                container.style.opacity = '1';
+                container.style.pointerEvents = 'auto';
+              }
+              showToast((data && data.message) || 'Terjadi kesalahan saat menghapus dokumen.', 'error');
+            }
+          }).catch(err => {
+            console.error('Delete error:', err);
+            // Restore container state on error
+            if (container) {
+              container.style.opacity = '1';
+              container.style.pointerEvents = 'auto';
+            }
+            showToast('Terjadi kesalahan jaringan saat menghapus dokumen. Silakan coba lagi.', 'error');
+          });
+        });
       });
     </script>
+
+    {{-- Include PJAX / navigation enhancements for smoother page switches --}}
+    @include('partials.nav_enhance')
   </body>
 </html>

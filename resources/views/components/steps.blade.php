@@ -6,7 +6,7 @@
             <div class="bg-white p-6 rounded-xl shadow hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 step-card step-1">
                 <div class="flex flex-col items-center mb-4">
                     <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-3 step-icon-container">
-                        <img src="/images/buatakun.png" alt="Buat Akun" class="w-14 h-14 object-contain step-icon">
+                        <img src="/images/buatakun.png" alt="Buat Akun" class="w-14 h-14 object-contain step-icon" loading="lazy" decoding="async">
                     </div>
                     <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold step-number">
                         1
@@ -19,7 +19,7 @@
             <div class="bg-white p-6 rounded-xl shadow hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 step-card step-2">
                 <div class="flex flex-col items-center mb-4">
                     <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-3 step-icon-container">
-                        <img src="/images/ajukanlamaran.png" alt="Ajukan Lamaran" class="w-14 h-14 object-contain step-icon">
+                        <img src="/images/ajukanlamaran.png" alt="Ajukan Lamaran" class="w-14 h-14 object-contain step-icon" loading="lazy" decoding="async">
                     </div>
                     <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold step-number">
                         2
@@ -32,7 +32,7 @@
             <div class="bg-white p-6 rounded-xl shadow hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 step-card step-3">
                 <div class="flex flex-col items-center mb-4">
                     <div class="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mb-3 step-icon-container">
-                        <img src="/images/seleksidanhasil.png" alt="Seleksi & Hasil" class="w-14 h-14 object-contain step-icon">
+                        <img src="/images/seleksidanhasil.png" alt="Seleksi & Hasil" class="w-14 h-14 object-contain step-icon" loading="lazy" decoding="async">
                     </div>
                     <div class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold step-number">
                         3

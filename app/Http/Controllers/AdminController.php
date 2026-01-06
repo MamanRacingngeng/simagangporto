@@ -9,6 +9,8 @@ use App\Models\KuotaMagang;
 use App\Models\JadwalMagang;
 use App\Models\Notifikasi;
 use App\Mail\NotifikasiKekuranganSyarat;
+use App\Mail\SuratKerjaTersedia;
+use App\Mail\NotifikasiStatusPermohonan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use App\Helpers\CacheHelper;
 
 class AdminController extends Controller
 {
@@ -96,36 +100,65 @@ class AdminController extends Controller
     // Dashboard Admin
     public function dashboard()
     {
-        $totalPendaftar = User::where('role', 'user')->count(); // Sesuai ERD: role adalah 'user' atau 'admin'
-        $totalPermohonan = PermohonanMagang::count();
-        $siapDiverifikasi = PermohonanMagang::where('status', 'Diajukan')->count(); // Status = "Diajukan"
-        $perluKeputusan = PermohonanMagang::where('status', 'Diverifikasi')->count(); // Status = "Diverifikasi"
-        $diterima = PermohonanMagang::where('status', 'Diterima')->count(); // Status = "Diterima"
-        $ditolak = PermohonanMagang::where('status', 'Ditolak')->count(); // Status = "Ditolak"
+        // Cache dashboard data untuk 3 menit (lebih lama untuk performa)
+        $cacheKey = 'admin_dashboard_' . now()->format('Y-m-d-H-i');
+        $data = Cache::remember($cacheKey, 180, function () {
+            // Optimasi: Ambil semua statistik dalam satu query
+            $stats = PermohonanMagang::selectRaw('
+                COUNT(*) as total_permohonan,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as siap_diverifikasi,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as perlu_keputusan,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as diterima,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as ditolak
+            ', ['Diajukan', 'Diverifikasi', 'Diterima', 'Ditolak'])
+            ->first();
+            
+            $totalPendaftar = User::where('role', 'user')->count();
+            
+            return [
+                'totalPendaftar' => $totalPendaftar,
+                'totalPermohonan' => $stats->total_permohonan ?? 0,
+                'siapDiverifikasi' => $stats->siap_diverifikasi ?? 0,
+                'perluKeputusan' => $stats->perlu_keputusan ?? 0,
+                'diterima' => $stats->diterima ?? 0,
+                'ditolak' => $stats->ditolak ?? 0,
+            ];
+        });
 
-        // Cari semua jadwal aktif berdasarkan tanggal saat ini (setiap divisi punya jadwal sendiri)
+        // Cari semua jadwal aktif - cache 5 menit (lebih lama)
         $today = now()->toDateString();
-        $jadwalAktif = JadwalMagang::where('tgl_mulai', '<=', $today)
+        $jadwalCacheKey = "jadwal_aktif_{$today}";
+        $jadwalAktif = Cache::remember($jadwalCacheKey, 300, function () use ($today) {
+            return JadwalMagang::where('tgl_mulai', '<=', $today)
             ->where('tgl_selesai', '>=', $today)
             ->orderBy('created_at', 'desc')
-            ->get();
+                ->get(['id', 'periode', 'posisi', 'tgl_mulai', 'tgl_selesai']);
+        });
         
-        // Ambil semua kuota aktif untuk semua divisi
-        $kuotaAktif = collect();
-        foreach ($jadwalAktif as $jadwal) {
-            $kuota = KuotaMagang::where('periode', $jadwal->periode)
-                ->where('posisi', $jadwal->posisi)
-                ->first();
-            if ($kuota) {
-                $kuotaAktif->push($kuota);
-            }
-        }
+        // Ambil semua kuota aktif untuk semua divisi - cache 5 menit (lebih lama)
+        $kuotaAktif = Cache::remember("kuota_aktif_{$today}", 300, function () use ($jadwalAktif) {
+            $periodePosisi = $jadwalAktif->map(function ($j) {
+                return ['periode' => $j->periode, 'posisi' => $j->posisi];
+            })->unique(function ($item) {
+                return $item['periode'] . '|' . $item['posisi'];
+            });
+            
+            return KuotaMagang::where(function ($query) use ($periodePosisi) {
+                foreach ($periodePosisi as $pp) {
+                    $query->orWhere(function ($q) use ($pp) {
+                        $q->where('periode', $pp['periode'])
+                          ->where('posisi', $pp['posisi']);
+                    });
+                }
+            })->get();
+        });
 
-        // Aktivitas Pendaftar Terbaru (5-7 item)
-        $activities = PermohonanMagang::with('user')
+        // Aktivitas Pendaftar Terbaru - cache 2 menit (lebih lama)
+        $activities = Cache::remember('admin_activities', 120, function () {
+            return PermohonanMagang::with('user:id,nama')
             ->orderBy('created_at', 'desc')
             ->limit(7)
-            ->get()
+                ->get(['id', 'user_id', 'status', 'created_at'])
             ->map(function ($permohonan) {
                 $userName = $permohonan->user->nama ?? 'User';
                 $statusMap = [
@@ -145,53 +178,56 @@ class AdminController extends Controller
                     'waktu' => $permohonan->created_at,
                     'diff' => $permohonan->created_at->diffForHumans(),
                 ];
+                });
             });
 
         // ========== DATA UNTUK GRAFIK ==========
         
-        // 1. Bar Chart Data - Jumlah pendaftar berdasarkan status
+        // 1. Bar Chart Data
         $barChartData = [
             'labels' => ['Siap Diverifikasi', 'Perlu Keputusan', 'Diterima', 'Ditolak'],
             'data' => [
-                $siapDiverifikasi,
-                $perluKeputusan,
-                $diterima,
-                $ditolak
+                $data['siapDiverifikasi'],
+                $data['perluKeputusan'],
+                $data['diterima'],
+                $data['ditolak']
             ],
             'colors' => ['#06B6D4', '#F59E0B', '#10B981', '#EF4444']
         ];
 
-        // 2. Line Chart Data - Tren pendaftar per bulan (12 bulan terakhir)
-        $lineChartData = $this->getMonthlyTrendData(12);
+        // 2. Line Chart Data - cache 5 menit
+        $lineChartData = Cache::remember('admin_line_chart_data', 300, function () {
+            return $this->getMonthlyTrendData(12);
+        });
 
-        // 3. Pie Chart Data - Persentase status pendaftar
-        $totalStatus = $siapDiverifikasi + $perluKeputusan + $diterima + $ditolak;
+        // 3. Pie Chart Data
+        $totalStatus = $data['siapDiverifikasi'] + $data['perluKeputusan'] + $data['diterima'] + $data['ditolak'];
         $pieChartData = [
             'labels' => ['Siap Diverifikasi', 'Perlu Keputusan', 'Diterima', 'Ditolak'],
             'data' => [
-                $siapDiverifikasi,
-                $perluKeputusan,
-                $diterima,
-                $ditolak
+                $data['siapDiverifikasi'],
+                $data['perluKeputusan'],
+                $data['diterima'],
+                $data['ditolak']
             ],
             'colors' => ['#06B6D4', '#F59E0B', '#10B981', '#EF4444'],
             'total' => $totalStatus
         ];
 
-        return view('admin.dashboard', compact(
-            'totalPendaftar', 
-            'totalPermohonan', 
-            'siapDiverifikasi', 
-            'perluKeputusan',
-            'diterima',
-            'ditolak',
-            'jadwalAktif',
-            'kuotaAktif',
-            'activities',
-            'barChartData',
-            'lineChartData',
-            'pieChartData'
-        ));
+        return view('admin.dashboard', [
+            'totalPendaftar' => $data['totalPendaftar'],
+            'totalPermohonan' => $data['totalPermohonan'],
+            'siapDiverifikasi' => $data['siapDiverifikasi'],
+            'perluKeputusan' => $data['perluKeputusan'],
+            'diterima' => $data['diterima'],
+            'ditolak' => $data['ditolak'],
+            'jadwalAktif' => $jadwalAktif,
+            'kuotaAktif' => $kuotaAktif,
+            'activities' => $activities,
+            'barChartData' => $barChartData,
+            'lineChartData' => $lineChartData,
+            'pieChartData' => $pieChartData,
+        ]);
     }
 
     /**
@@ -203,7 +239,7 @@ class AdminController extends Controller
     public function lihatDataPendaftar(Request $request)
     {
         // Ambil semua permohonan dari database dengan filter status jika ada
-        $query = PermohonanMagang::with(['user', 'dokumen', 'kuotaMagang']);
+        $query = PermohonanMagang::with(['user:id,nama,email', 'dokumen:id,user_id,cv,surat_pengantar,proposal', 'kuotaMagang:id,periode,posisi']);
         
         // Filter berdasarkan status jika ada parameter
         if ($request->has('status') && $request->status) {
@@ -212,8 +248,10 @@ class AdminController extends Controller
         
         $permohonan = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        // Decision: Ada permohonan baru?
-        $adaPermohonanBaru = PermohonanMagang::where('status', 'Diajukan')->exists();
+        // Decision: Ada permohonan baru? - cache 2 menit (lebih lama)
+        $adaPermohonanBaru = Cache::remember('ada_permohonan_baru', 120, function () {
+            return PermohonanMagang::where('status', 'Diajukan')->exists();
+        });
 
         return view('admin.data_pendaftar', compact('permohonan', 'adaPermohonanBaru'));
     }
@@ -366,6 +404,8 @@ class AdminController extends Controller
             }
 
             $dokumen = $permohonan->dokumen;
+            $statusLama = $permohonan->status;
+            $user = $permohonan->user;
             
             // Decision: Dokumen lengkap & valid?
             $dokumenLengkap = !empty($dokumen->cv) && 
@@ -382,10 +422,33 @@ class AdminController extends Controller
             // Decision: Dokumen lengkap & valid? → Tidak
             if (!$dokumenLengkap || !$dokumenValid) {
                 // Admin menolak permohonan dengan alasan
+                $alasanPenolakan = 'Dokumen tidak lengkap atau tidak valid. Pastikan CV, Surat Pengantar, dan Proposal telah diunggah dengan benar.';
                 $permohonan->update([
                     'status' => 'Ditolak',
-                    'alasan_penolakan' => 'Dokumen tidak lengkap atau tidak valid. Pastikan CV, Surat Pengantar, dan Proposal telah diunggah dengan benar.',
+                    'alasan_penolakan' => $alasanPenolakan,
                 ]);
+                
+                // Kirim email notifikasi ke user
+                if ($user && !empty($user->email) && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                    try {
+                        Mail::to($user->email)->send(
+                            new NotifikasiStatusPermohonan($user, $permohonan, 'Ditolak', $statusLama, $alasanPenolakan, null)
+                        );
+                        Log::info("Email notifikasi status 'Ditolak' berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}");
+                    } catch (\Exception $e) {
+                        Log::error("Gagal mengirim email notifikasi status 'Ditolak': " . $e->getMessage());
+                    }
+                }
+                
+                // Clear cache user - PASTIKAN SEMUA CACHE DI-CLEAR
+                Cache::forget("riwayat_user_{$user->id}");
+                Cache::forget("dashboard_user_{$user->id}");
+                Cache::forget("lamaran_user_{$user->id}");
+                Cache::forget("notifikasi_user_{$user->id}");
+                CacheHelper::clearUserCache($user->id);
+                
+                // Force refresh dengan delay kecil untuk memastikan cache benar-benar di-clear
+                usleep(100000); // 100ms delay
 
                 return back()->with('error', 'Permohonan ditolak. Dokumen tidak lengkap atau tidak valid.');
             }
@@ -395,6 +458,28 @@ class AdminController extends Controller
             $permohonan->update([
                 'status' => 'Diverifikasi',
             ]);
+            
+            // Kirim email notifikasi ke user
+            if ($user && !empty($user->email) && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    Mail::to($user->email)->send(
+                        new NotifikasiStatusPermohonan($user, $permohonan, 'Diverifikasi', $statusLama, null, null)
+                    );
+                    Log::info("Email notifikasi status 'Diverifikasi' berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}");
+                } catch (\Exception $e) {
+                    Log::error("Gagal mengirim email notifikasi status 'Diverifikasi': " . $e->getMessage());
+                }
+            }
+            
+            // Clear cache user - PASTIKAN SEMUA CACHE DI-CLEAR
+            Cache::forget("riwayat_user_{$user->id}");
+            Cache::forget("dashboard_user_{$user->id}");
+            Cache::forget("lamaran_user_{$user->id}");
+            Cache::forget("notifikasi_user_{$user->id}");
+            CacheHelper::clearUserCache($user->id);
+            
+            // Force refresh dengan delay kecil untuk memastikan cache benar-benar di-clear
+            usleep(100000); // 100ms delay
 
             return back()->with('success', 'Dokumen berhasil diverifikasi. Status permohonan: Diverifikasi. Silakan tentukan keputusan (Diterima/Ditolak) di halaman detail.');
         } catch (\Exception $e) {
@@ -413,8 +498,9 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'status' => 'required|in:Diajukan,Diverifikasi,Diterima,Ditolak',
+                'status' => 'required|in:Diajukan,Diverifikasi,Diterima,Ditolak,Revisi',
                 'alasan_penolakan' => 'required_if:status,Ditolak|string|max:1000',
+                'catatan_revisi' => 'nullable|string|max:1000',
             ], [
                 'alasan_penolakan.required_if' => 'Alasan penolakan wajib diisi jika status adalah Ditolak.',
             ]);
@@ -447,15 +533,111 @@ class AdminController extends Controller
                     ])->withInput();
                 }
                 $updateData['alasan_penolakan'] = $request->alasan_penolakan;
-            } else {
-                // Jika bukan ditolak, hapus alasan penolakan
+                // hapus catatan revisi jika ada
+                $updateData['catatan_revisi'] = null;
+            } elseif ($request->status === 'Revisi') {
+                // Untuk status Revisi, simpan catatan revisi terpisah
+                $updateData['catatan_revisi'] = $request->catatan_revisi ?: null;
+                // jangan gunakan alasan_penolakan sebagai revisi
                 $updateData['alasan_penolakan'] = null;
+            } else {
+                // Jika bukan Ditolak atau Revisi, hapus kedua field terkait
+                $updateData['alasan_penolakan'] = null;
+                $updateData['catatan_revisi'] = null;
             }
             
             // Update status - Observer akan menangani sinkronisasi kuota secara otomatis
             $permohonan->update($updateData);
+            
+            // Kirim email notifikasi ke user jika status berubah
+            $user = $permohonan->user;
+            if ($user && !empty($user->email) && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    $alasan = null;
+                    $catatanRevisi = null;
+                    
+                    if ($request->status === 'Ditolak') {
+                        $alasan = $request->alasan_penolakan;
+                    } elseif ($request->status === 'Revisi') {
+                        $catatanRevisi = $request->catatan_revisi;
+                    }
+                    
+                    Mail::to($user->email)->send(
+                        new NotifikasiStatusPermohonan($user, $permohonan, $request->status, $statusLama, $alasan, $catatanRevisi)
+                    );
+                    Log::info("Email notifikasi status '{$request->status}' berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}");
+                } catch (\Exception $e) {
+                    Log::error("Gagal mengirim email notifikasi status '{$request->status}': " . $e->getMessage());
+                }
+            }
+            
+            // Buat notifikasi untuk user jika status berubah menjadi Revisi
+            $revisiBerhasilDikirim = false;
+            $notifikasiId = null;
+            if ($request->status === 'Revisi' && $statusLama !== 'Revisi') {
+                $catatanRevisi = $request->catatan_revisi ?: 'Dokumen Anda memerlukan perbaikan. Silakan periksa dan unggah ulang dokumen yang telah diperbaiki.';
+                
+                try {
+                    $notifikasi = Notifikasi::create([
+                        'user_id' => $permohonan->user_id,
+                        'permohonan_magang_id' => $permohonan->id,
+                        'admin_id' => Auth::id(),
+                        'judul' => 'Permohonan Magang Memerlukan Revisi',
+                        'pesan' => 'Permohonan magang Anda memerlukan revisi. ' . ($request->catatan_revisi ? "\n\nCatatan Revisi:\n" . $request->catatan_revisi : 'Silakan periksa dokumen Anda dan unggah ulang dokumen yang telah diperbaiki.'),
+                        'tipe' => 'revisi',
+                        'dibaca' => false,
+                    ]);
+                    
+                    $notifikasiId = $notifikasi->id;
+                    $revisiBerhasilDikirim = true;
+                    
+                    // PENTING: Clear cache notifikasi SEBELUM clear user cache untuk memastikan notifikasi langsung muncul
+                    Cache::forget("notifikasi_user_{$permohonan->user_id}");
+                    Cache::forget("riwayat_user_{$permohonan->user_id}");
+                    Cache::forget("dashboard_user_{$permohonan->user_id}");
+                    Cache::forget("lamaran_user_{$permohonan->user_id}");
+                    
+                    // Log untuk debugging
+                    \Log::info("Notifikasi revisi berhasil dibuat", [
+                        'user_id' => $permohonan->user_id,
+                        'notifikasi_id' => $notifikasiId,
+                        'permohonan_id' => $permohonan->id,
+                        'admin_id' => Auth::id(),
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error("Gagal membuat notifikasi revisi", [
+                        'user_id' => $permohonan->user_id,
+                        'permohonan_id' => $permohonan->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            // Clear cache untuk admin dan user yang bersangkutan agar perubahan langsung terlihat
+            // Clear cache notifikasi lagi untuk memastikan - PASTIKAN SEMUA CACHE DI-CLEAR
+            $userId = $permohonan->user_id;
+            Cache::forget("notifikasi_user_{$userId}");
+            Cache::forget("riwayat_user_{$userId}");
+            Cache::forget("dashboard_user_{$userId}");
+            Cache::forget("lamaran_user_{$userId}");
+            CacheHelper::clearAdminCache();
+            CacheHelper::clearUserCache($userId);
+            
+            // Force refresh dengan delay kecil untuk memastikan cache benar-benar di-clear
+            usleep(100000); // 100ms delay
 
-            return back()->with('success', 'Status permohonan berhasil diperbarui. ' . ($request->status === 'Diterima' ? 'Kuota telah disinkronisasi secara otomatis.' : ''));
+            // Pesan sukses yang lebih informatif
+            $successMessage = 'Status permohonan berhasil diperbarui.';
+            if ($request->status === 'Diterima') {
+                $successMessage .= ' Kuota telah disinkronisasi secara otomatis.';
+            } elseif ($request->status === 'Revisi' && $revisiBerhasilDikirim) {
+                $userNama = $permohonan->user->nama ?? 'Pendaftar';
+                $successMessage = "✅ Notifikasi revisi telah berhasil dikirim kepada {$userNama}. Status permohonan telah diubah menjadi 'Revisi' dan pendaftar akan menerima notifikasi untuk memperbaiki dokumen.";
+            } elseif ($request->status === 'Ditolak') {
+                $successMessage .= ' Alasan penolakan telah disimpan.';
+            }
+
+            return back()->with('success', $successMessage);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -632,11 +814,24 @@ class AdminController extends Controller
             // Status permohonan (termasuk "Diterima" dan "Ditolak" yang bersifat final) tidak akan berubah
             
             // Detach semua relasi permohonan dengan kuota ini (hanya hapus relasi di pivot table, tidak ubah status permohonan)
+            $userIds = DB::table('permohonan_kuota')
+                ->where('kuota_magang_id', $id)
+                ->join('permohonan_magang', 'permohonan_kuota.permohonan_magang_id', '=', 'permohonan_magang.id')
+                ->pluck('permohonan_magang.user_id')
+                ->unique();
+            
             DB::table('permohonan_kuota')
                 ->where('kuota_magang_id', $id)
                 ->delete();
             
             $kuota->delete();
+            
+            // Clear cache untuk semua user yang terpengaruh
+            foreach ($userIds as $userId) {
+                CacheHelper::clearUserCache($userId);
+                Cache::forget("dashboard_user_{$userId}");
+                Cache::forget("riwayat_user_{$userId}");
+            }
 
             return back()->with('success', 'Kuota magang berhasil dihapus. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Exception $e) {
@@ -762,7 +957,23 @@ class AdminController extends Controller
             // Status permohonan (termasuk "Diterima" dan "Ditolak" yang bersifat final) tidak akan berubah
             // Jadwal tidak memiliki relasi langsung dengan permohonan, hanya melalui kuota
             
+            // Ambil semua user yang memiliki permohonan dengan kuota yang menggunakan jadwal ini
+            $userIds = DB::table('permohonan_magang')
+                ->join('permohonan_kuota', 'permohonan_magang.id', '=', 'permohonan_kuota.permohonan_magang_id')
+                ->join('kuota_magang', 'permohonan_kuota.kuota_magang_id', '=', 'kuota_magang.id')
+                ->where('kuota_magang.periode', $jadwal->periode)
+                ->where('kuota_magang.posisi', $jadwal->posisi)
+                ->pluck('permohonan_magang.user_id')
+                ->unique();
+            
             $jadwal->delete();
+            
+            // Clear cache untuk semua user yang terpengaruh
+            foreach ($userIds as $userId) {
+                CacheHelper::clearUserCache($userId);
+                Cache::forget("dashboard_user_{$userId}");
+                Cache::forget("riwayat_user_{$userId}");
+            }
 
             return back()->with('success', 'Jadwal magang berhasil dihapus. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Exception $e) {
@@ -899,141 +1110,247 @@ class AdminController extends Controller
         return back()->withErrors(['error' => 'Tidak dapat menghapus data ini.']);
     }
 
-    // Notifikasi Kekurangan Syarat User
-    public function notifikasiKekuranganSyarat()
-    {
-        // Ambil semua user yang memiliki permohonan dengan dokumen tidak lengkap
-        $usersKurangSyarat = User::where('role', 'user')
-            ->with(['dokumen', 'permohonanMagang'])
-            ->get()
-            ->filter(function ($user) {
-                $dokumen = $user->dokumen;
-                $hasPermohonan = $user->permohonanMagang->count() > 0;
-                
-                // Cek apakah dokumen tidak lengkap
-                $dokumenLengkap = $dokumen && 
-                    !empty($dokumen->cv) && 
-                    !empty($dokumen->surat_pengantar) && 
-                    !empty($dokumen->proposal);
-                
-                // User yang memiliki permohonan tapi dokumen tidak lengkap
-                return $hasPermohonan && !$dokumenLengkap;
-            })
-            ->map(function ($user) {
-                $dokumen = $user->dokumen;
-                $permohonan = $user->permohonanMagang->first();
-                
-                $kekurangan = [];
-                if (!$dokumen || empty($dokumen->cv)) {
-                    $kekurangan[] = 'CV';
-                }
-                if (!$dokumen || empty($dokumen->surat_pengantar)) {
-                    $kekurangan[] = 'Surat Pengantar';
-                }
-                if (!$dokumen || empty($dokumen->proposal)) {
-                    $kekurangan[] = 'Proposal';
-                }
-                
-                return [
-                    'user' => $user,
-                    'permohonan' => $permohonan,
-                    'kekurangan' => $kekurangan,
-                    'dokumen' => $dokumen,
-                ];
-            });
-
-        // Ambil semua pendaftar untuk dropdown
-        $allPendaftar = User::where('role', 'user')
-            ->with(['permohonanMagang', 'dokumen'])
-            ->orderBy('nama')
-            ->get();
-
-        return view('admin.notifikasi_kekurangan_syarat', compact('usersKurangSyarat', 'allPendaftar'));
-    }
-
-    /**
-     * Menampilkan form untuk mengirim notifikasi ke pendaftar tertentu
+/**
+     * Menampilkan form untuk mengirim revisi ke pendaftar
      */
-    public function kirimNotifikasi($id = null)
+    public function kirimRevisi($id = null)
     {
         $pendaftar = null;
         $permohonan = null;
         
-        // Ambil semua pendaftar untuk dropdown
+        // Ambil semua pendaftar yang memiliki permohonan aktif untuk dropdown
         $allPendaftar = User::where('role', 'user')
-            ->with(['permohonanMagang', 'dokumen'])
+            ->whereHas('permohonanMagang', function($q) {
+                $q->whereIn('status', ['Diajukan', 'Diverifikasi']);
+            })
+            ->with(['permohonanMagang' => function($q) {
+                $q->whereIn('status', ['Diajukan', 'Diverifikasi'])->orderBy('created_at', 'desc');
+            }, 'dokumen'])
             ->orderBy('nama')
             ->get();
         
         if ($id) {
             $pendaftar = User::where('role', 'user')
-                ->with(['dokumen', 'permohonanMagang.kuotaMagang'])
+                ->with(['dokumen', 'permohonanMagang' => function($q) {
+                    $q->whereIn('status', ['Diajukan', 'Diverifikasi'])->orderBy('created_at', 'desc');
+                }])
                 ->findOrFail($id);
             
             $permohonan = $pendaftar->permohonanMagang->first();
         }
 
-        return view('admin.kirim_notifikasi', compact('pendaftar', 'permohonan', 'allPendaftar'));
+        return view('admin.kirim_revisi', compact('pendaftar', 'permohonan', 'allPendaftar'));
+    }
+    
+    /**
+     * API: Ambil permohonan berdasarkan user_id
+     */
+    public function getPermohonanByUser($userId)
+    {
+        try {
+            $user = User::where('role', 'user')->findOrFail($userId);
+            
+            $permohonan = PermohonanMagang::where('user_id', $userId)
+                ->whereIn('status', ['Diajukan', 'Diverifikasi'])
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'status', 'created_at']);
+            
+            return response()->json([
+                'success' => true,
+                'permohonan' => $permohonan
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 
     /**
-     * Mengirim notifikasi kepada pendaftar
+     * Mengirim revisi kepada pendaftar (mengubah status menjadi Revisi, kirim notifikasi dan email)
      */
-    public function storeNotifikasi(Request $request)
+    public function storeRevisi(Request $request)
     {
         try {
             $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'permohonan_magang_id' => 'nullable|exists:permohonan_magang,id',
+                'permohonan_magang_id' => 'required|exists:permohonan_magang,id',
                 'judul' => 'required|string|max:255',
-                'pesan' => 'required|string',
-                'tipe' => 'required|in:info,warning,error,success',
+                'tipe' => 'required|in:revisi',
+                'pesan' => 'required|string|max:2000',
                 'kirim_email' => 'nullable|boolean',
             ], [
                 'user_id.required' => 'Pendaftar harus dipilih.',
+                'permohonan_magang_id.required' => 'Permohonan harus dipilih.',
                 'judul.required' => 'Judul notifikasi wajib diisi.',
-                'pesan.required' => 'Pesan notifikasi wajib diisi.',
                 'tipe.required' => 'Tipe notifikasi wajib dipilih.',
+                'pesan.required' => 'Pesan revisi wajib diisi.',
             ]);
 
             $user = User::findOrFail($request->user_id);
+            $permohonan = PermohonanMagang::findOrFail($request->permohonan_magang_id);
+            
+            // Validasi: Pastikan permohonan milik user yang dipilih
+            if ($permohonan->user_id != $user->id) {
+                return back()->withErrors([
+                    'error' => 'Permohonan tidak sesuai dengan pendaftar yang dipilih.'
+                ])->withInput();
+            }
+            
+            // Validasi: Status harus bisa diubah menjadi Revisi
+            $statusFinal = ['Diterima', 'Ditolak'];
+            if (in_array($permohonan->status, $statusFinal)) {
+                return back()->withErrors([
+                    'error' => "Status permohonan sudah final ({$permohonan->status}) dan tidak dapat diubah menjadi Revisi."
+                ])->withInput();
+            }
+            
             $adminId = Auth::id();
 
-            // Simpan notifikasi ke database
+            // Update status menjadi Revisi
+            // Simpan pesan sebagai catatan_revisi juga untuk kompatibilitas
+            $permohonan->update([
+                'status' => 'Revisi',
+                'catatan_revisi' => $request->pesan,
+                'alasan_penolakan' => null, // Hapus alasan penolakan jika ada
+            ]);
+
+            Log::info("Status permohonan {$permohonan->id} diubah menjadi Revisi untuk user {$user->id}");
+
+            // Buat notifikasi untuk user dengan judul, tipe, dan pesan dari form
             $notifikasi = Notifikasi::create([
                 'user_id' => $user->id,
-                'permohonan_magang_id' => $request->permohonan_magang_id,
+                'permohonan_magang_id' => $permohonan->id,
                 'admin_id' => $adminId,
                 'judul' => $request->judul,
                 'pesan' => $request->pesan,
-                'tipe' => $request->tipe,
+                'tipe' => 'revisi',
                 'dibaca' => false,
             ]);
 
-            // Kirim email jika diminta
-            if ($request->has('kirim_email') && $request->kirim_email) {
+            Log::info("Notifikasi revisi berhasil dibuat dengan ID {$notifikasi->id} untuk user {$user->id}");
+
+            // Kirim email - default true (checkbox default checked)
+            // Jika checkbox checked, nilai = "1", jika tidak checked, tidak ada parameter
+            $kirimEmail = $request->has('kirim_email') ? $request->boolean('kirim_email') : true;
+            $emailStatus = '';
+            $emailSent = false;
+            
+            if ($kirimEmail) {
                 try {
-                    Mail::to($user->email)->send(
-                        new NotifikasiKekuranganSyarat(
-                            $user,
-                            $request->judul,
-                            $request->pesan
-                        )
-                    );
-                    Log::info("Notifikasi email berhasil dikirim ke {$user->email}");
+                    // Pastikan email user valid
+                    if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                        Log::warning("Email user tidak valid: {$user->email} untuk user {$user->id}");
+                        $emailStatus = ' (email tidak valid)';
+                    } else {
+                        // Kirim email secara synchronous untuk memastikan terkirim
+                        Mail::to($user->email)->send(
+                            new NotifikasiKekuranganSyarat(
+                                $user,
+                                $request->judul,
+                                $request->pesan
+                            )
+                        );
+                        $emailSent = true;
+                        Log::info("Email revisi berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}", [
+                            'user_id' => $user->id,
+                            'user_email' => $user->email,
+                            'permohonan_id' => $permohonan->id,
+                            'judul' => $request->judul,
+                        ]);
+                        $emailStatus = ' (termasuk email)';
+                    }
+                } catch (\Swift_TransportException $e) {
+                    // Error transport (SMTP, dll)
+                    Log::error("Gagal mengirim email revisi (Transport Error) ke {$user->email}: " . $e->getMessage(), [
+                        'user_id' => $user->id,
+                        'user_email' => $user->email,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $emailStatus = ' (email gagal dikirim - cek konfigurasi email di .env)';
                 } catch (\Exception $e) {
-                    Log::error("Gagal mengirim email notifikasi: " . $e->getMessage());
-                    // Notifikasi tetap tersimpan meskipun email gagal
+                    // Error lainnya
+                    Log::error("Gagal mengirim email revisi ke {$user->email}: " . $e->getMessage(), [
+                        'user_id' => $user->id,
+                        'user_email' => $user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    $emailStatus = ' (email gagal dikirim, silakan cek log)';
                 }
+            } else {
+                Log::info("Email tidak dikirim karena checkbox tidak dicentang untuk user {$user->id}");
             }
 
-            return back()->with('success', 'Notifikasi berhasil dikirim kepada ' . $user->nama . ($request->has('kirim_email') && $request->kirim_email ? ' (termasuk email)' : ''));
+            // PENTING: Clear cache notifikasi SEBELUM clear user cache untuk memastikan notifikasi langsung muncul
+            // Clear cache dengan multiple attempts untuk memastikan cache benar-benar ter-clear
+            $cacheKeys = [
+                "notifikasi_user_{$user->id}",
+                "dashboard_user_{$user->id}",
+            ];
+            
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            
+            // Clear cache menggunakan helper
+            CacheHelper::clearAdminCache();
+            CacheHelper::clearUserCache($user->id);
+            
+            // Clear cache lagi untuk memastikan (race condition protection)
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            
+            // Verifikasi notifikasi benar-benar dibuat
+            $notifikasiCheck = Notifikasi::find($notifikasi->id);
+            if (!$notifikasiCheck) {
+                Log::error("Notifikasi tidak ditemukan setelah dibuat", [
+                    'notifikasi_id' => $notifikasi->id,
+                    'user_id' => $user->id,
+                ]);
+            } else {
+                Log::info("Notifikasi berhasil diverifikasi", [
+                    'notifikasi_id' => $notifikasi->id,
+                    'user_id' => $user->id,
+                    'judul' => $notifikasiCheck->judul,
+                    'tipe' => $notifikasiCheck->tipe,
+                    'dibaca' => $notifikasiCheck->dibaca,
+                ]);
+            }
+            
+            // Refresh permohonan untuk memastikan data terbaru
+            $permohonan->refresh();
+
+            Log::info("Cache dibersihkan untuk user {$user->id} setelah mengirim revisi", [
+                'notifikasi_id' => $notifikasi->id,
+                'permohonan_id' => $permohonan->id,
+                'status' => $permohonan->status,
+                'user_id' => $user->id,
+                'cache_keys_cleared' => $cacheKeys,
+            ]);
+
+            // Buat pesan sukses yang informatif
+            $successMessage = '✅ Revisi berhasil dikirim kepada ' . $user->nama . ' (' . $user->email . '). ';
+            $successMessage .= 'Status permohonan telah diubah menjadi "Revisi" dan pendaftar akan menerima notifikasi';
+            if ($kirimEmail && $emailSent) {
+                $successMessage .= ' serta email';
+            } elseif ($kirimEmail && !$emailSent) {
+                $successMessage .= ' (email gagal dikirim)';
+            }
+            $successMessage .= ' untuk memperbaiki dokumen.';
+            
+            // Redirect ke halaman detail pendaftar dengan success message
+            // Menggunakan redirect ke route detail pendaftar untuk memastikan flash message muncul
+            return redirect()->route('admin.detail_pendaftar', $permohonan->id)
+                ->with('success', $successMessage);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            Log::error('Error sending notification: ' . $e->getMessage());
+            Log::error('Error sending revision: ' . $e->getMessage());
             return back()->withErrors([
-                'error' => 'Terjadi kesalahan saat mengirim notifikasi. Silakan coba lagi.'
+                'error' => 'Terjadi kesalahan saat mengirim revisi. Silakan coba lagi.'
             ])->withInput();
         }
     }
@@ -1077,6 +1394,10 @@ class AdminController extends Controller
                 'aktif' => $request->has('aktif') ? (bool)$request->aktif : true,
                 'urutan' => $request->urutan ?? 0,
             ]);
+            
+            // Clear cache untuk landing page dan galeri
+            Cache::forget('welcome_page_data');
+            Cache::forget('galeri_magang_aktif');
 
             return back()->with('success', 'Foto galeri berhasil ditambahkan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1128,6 +1449,10 @@ class AdminController extends Controller
             }
 
             $galeri->update($updateData);
+            
+            // Clear cache untuk landing page dan galeri
+            Cache::forget('welcome_page_data');
+            Cache::forget('galeri_magang_aktif');
 
             return back()->with('success', 'Foto galeri berhasil diperbarui.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1151,6 +1476,10 @@ class AdminController extends Controller
             }
             
             $galeri->delete();
+            
+            // Clear cache untuk landing page dan galeri
+            Cache::forget('welcome_page_data');
+            Cache::forget('galeri_magang_aktif');
 
             return back()->with('success', 'Foto galeri berhasil dihapus.');
         } catch (\Exception $e) {
@@ -1188,5 +1517,120 @@ class AdminController extends Controller
             'labels' => $labels,
             'data' => $data
         ];
+    }
+    
+    /**
+     * Upload Surat Kerja (SK) untuk peserta yang diterima
+     */
+    public function uploadSK(Request $request, $id)
+    {
+        try {
+            $permohonan = PermohonanMagang::findOrFail($id);
+            
+            // Validasi: Hanya bisa upload SK untuk status Diterima
+            if ($permohonan->status !== 'Diterima') {
+                return back()->withErrors([
+                    'error' => 'Surat Kerja hanya dapat diunggah untuk permohonan dengan status "Diterima".'
+                ]);
+            }
+            
+            $request->validate([
+                'surat_kerja' => 'required|file|mimes:pdf|max:5120', // Max 5MB
+            ], [
+                'surat_kerja.required' => 'File Surat Kerja wajib diunggah.',
+                'surat_kerja.file' => 'File yang diunggah tidak valid.',
+                'surat_kerja.mimes' => 'File harus berformat PDF.',
+                'surat_kerja.max' => 'Ukuran file maksimal 5MB.',
+            ]);
+            
+            // Hapus file lama jika ada
+            if ($permohonan->surat_kerja && Storage::exists($permohonan->surat_kerja)) {
+                Storage::delete($permohonan->surat_kerja);
+            }
+            
+            // Simpan file baru
+            $file = $request->file('surat_kerja');
+            $fileName = 'sk_' . $permohonan->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $filePath = $file->storeAs('surat_kerja', $fileName, 'public');
+            
+            // Update database
+            $permohonan->update([
+                'surat_kerja' => $filePath
+            ]);
+            
+            // Kirim email ke user
+            $user = $permohonan->user;
+            $emailSent = false;
+            $emailStatus = '';
+            
+            try {
+                // Pastikan email user valid
+                if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                    Log::warning("Email user tidak valid: {$user->email} untuk user {$user->id}");
+                    $emailStatus = ' (email tidak valid)';
+                } else {
+                    // Kirim email secara synchronous
+                    Mail::to($user->email)->send(
+                        new SuratKerjaTersedia($user, $permohonan)
+                    );
+                    $emailSent = true;
+                    Log::info("Email Surat Kerja berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}", [
+                        'user_id' => $user->id,
+                        'user_email' => $user->email,
+                        'permohonan_id' => $permohonan->id,
+                    ]);
+                    $emailStatus = ' (termasuk email)';
+                }
+            } catch (\Swift_TransportException $e) {
+                Log::error("Gagal mengirim email Surat Kerja (Transport Error) ke {$user->email}: " . $e->getMessage(), [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+                $emailStatus = ' (email gagal dikirim - cek konfigurasi email di .env)';
+            } catch (\Exception $e) {
+                Log::error("Gagal mengirim email Surat Kerja ke {$user->email}: " . $e->getMessage(), [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                $emailStatus = ' (email gagal dikirim, silakan cek log)';
+            }
+            
+            // Clear cache - pastikan semua cache terkait user di-clear
+            CacheHelper::clearUserCache($permohonan->user_id);
+            $cacheKeys = [
+                "dashboard_user_{$permohonan->user_id}",
+                "riwayat_user_{$permohonan->user_id}",
+                "notifikasi_user_{$permohonan->user_id}",
+            ];
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            
+            Log::info("Surat Kerja berhasil diunggah untuk permohonan {$permohonan->id}", [
+                'permohonan_id' => $permohonan->id,
+                'user_id' => $permohonan->user_id,
+                'file_path' => $filePath,
+                'email_sent' => $emailSent,
+            ]);
+            
+            $successMessage = 'Surat Kerja berhasil diunggah.';
+            if ($emailSent) {
+                $successMessage .= ' Email notifikasi telah dikirim ke ' . $user->email . '.';
+            } else {
+                $successMessage .= $emailStatus;
+            }
+            
+            return back()->with('success', $successMessage);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error('Error uploading SK: ' . $e->getMessage());
+            return back()->withErrors([
+                'error' => 'Terjadi kesalahan saat mengunggah Surat Kerja. Silakan coba lagi.'
+            ])->withInput();
+        }
     }
 }

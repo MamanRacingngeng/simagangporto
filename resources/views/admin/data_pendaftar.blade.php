@@ -479,13 +479,15 @@
                         <td>
                             <div class="action-buttons">
                                 <a href="{{ route('admin.detail_pendaftar', $p->id) }}" class="btn-detail">Detail</a>
-                                <button type="button" class="btn-delete" 
-                                    data-id="{{ $p->id }}"
-                                    data-nama="{{ $p->user->nama ?? 'N/A' }}"
-                                    data-email="{{ $p->user->email ?? 'N/A' }}"
-                                    data-status="{{ $p->status }}">
-                                    Hapus
-                                </button>
+                                @if($p->status === 'Ditolak')
+                                    <button type="button" class="btn-delete" 
+                                        data-id="{{ $p->id }}"
+                                        data-nama="{{ $p->user->nama ?? 'N/A' }}"
+                                        data-email="{{ $p->user->email ?? 'N/A' }}"
+                                        data-status="{{ $p->status }}">
+                                        Hapus
+                                    </button>
+                                @endif
                             </div>
                         </td>
                     </tr>

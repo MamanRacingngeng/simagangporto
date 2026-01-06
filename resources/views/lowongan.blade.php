@@ -4,10 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Lowongan - Magang Digital</title>
+    {{-- Resource Hints untuk performa lebih cepat --}}
+    <link rel="dns-prefetch" href="{{ url('/') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+    {{-- Font loading optimasi - non-blocking --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    {{-- CSS dengan preload untuk faster rendering --}}
+    <link rel="preload" href="{{ asset('css/dashboard.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ asset('css/dashboard.css') }}"></noscript>
+    {{-- JS dengan defer untuk non-blocking --}}
     <script src="{{ asset('js/dashboard.js') }}" defer></script>
     <style>
       * { 
@@ -324,20 +331,23 @@
             <h1 class="page-title">Lowongan Magang</h1>
             <p class="page-subtitle">Pilih periode magang yang sesuai untuk Anda. Pastikan untuk melengkapi dokumen sebelum mengajukan permohonan.</p>
 
-            @if($kuotaMagang && $kuotaMagang->count() > 0)
+            @if(isset($kuotaMagang) && $kuotaMagang && $kuotaMagang->count() > 0)
               <div class="lowongan-grid">
                 @foreach($kuotaMagang as $kuota)
                   @php
-                    $jadwal = $kuota->jadwalMagang;
-                    $sisaKuota = $kuota->sisa_kuota;
-                    $kuotaTersedia = $kuota->kuota_tersedia;
+                    // OPTIMASI: Null safety untuk menghindari error
+                    $jadwal = isset($kuota->jadwalMagang) ? $kuota->jadwalMagang : null;
+                    $sisaKuota = isset($kuota->sisa_kuota) ? $kuota->sisa_kuota : 0;
+                    $kuotaTersedia = isset($kuota->kuota_tersedia) ? $kuota->kuota_tersedia : false;
                     $today = now()->toDateString();
-                    $isAkanDatang = $jadwal && $jadwal->tgl_mulai > $today;
-                    $isAktif = $jadwal && $jadwal->tgl_mulai <= $today && $jadwal->tgl_selesai >= $today;
+                    $isAkanDatang = $jadwal && isset($jadwal->tgl_mulai) && \Carbon\Carbon::parse($jadwal->tgl_mulai)->gt($today);
+                    $isAktif = $jadwal && isset($jadwal->tgl_mulai) && isset($jadwal->tgl_selesai) 
+                        && \Carbon\Carbon::parse($jadwal->tgl_mulai)->lte($today) 
+                        && \Carbon\Carbon::parse($jadwal->tgl_selesai)->gte($today);
                   @endphp
                   <div class="lowongan-card">
                     <div class="lowongan-card-header">
-                      <h3 class="periode-title">Periode {{ $kuota->periode }}</h3>
+                      <h3 class="periode-title">Periode {{ $kuota->periode ?? '-' }}</h3>
                       <div style="display: flex; gap: 8px; align-items: center;">
                         @if($isAkanDatang)
                           <span class="kuota-badge" style="background: #FEF3C7; color: #92400E;">
@@ -365,7 +375,7 @@
                       </div>
                     </div>
 
-                    @if($kuota->posisi)
+                    @if(isset($kuota->posisi) && $kuota->posisi)
                       <div class="info-row" style="background: #F0F9FF; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
                         <span class="info-label" style="color: #1E40AF; font-weight: 700;">Posisi/Departemen</span>
                         <span class="info-value" style="color: #1E40AF; font-weight: 700;">{{ $kuota->posisi }}</span>
@@ -375,11 +385,11 @@
                     <div class="info-row">
                       <span class="info-label">Tanggal Pelaksanaan</span>
                       <span class="info-value">
-                        @if($jadwal)
-                          {{ $jadwal->tgl_mulai->format('d/m/Y') }} - {{ $jadwal->tgl_selesai->format('d/m/Y') }}
-                          @if($isAkanDatang)
+                        @if($jadwal && isset($jadwal->tgl_mulai) && isset($jadwal->tgl_selesai))
+                          {{ \Carbon\Carbon::parse($jadwal->tgl_mulai)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($jadwal->tgl_selesai)->format('d/m/Y') }}
+                          @if($isAkanDatang && isset($jadwal->tgl_mulai))
                             <span style="display: block; font-size: 12px; color: #92400E; margin-top: 4px; font-weight: 500;">
-                              ⏰ Dimulai pada {{ $jadwal->tgl_mulai->format('d F Y') }}
+                              ⏰ Dimulai pada {{ \Carbon\Carbon::parse($jadwal->tgl_mulai)->format('d F Y') }}
                             </span>
                           @endif
                         @else
@@ -390,16 +400,15 @@
 
                     <div class="info-row">
                       <span class="info-label">Sisa Kuota</span>
-                      <span class="info-value {{ $sisaKuota > 0 ? 'kuota-hijau' : 'kuota-merah' }}" style="font-weight: 700; font-size: 16px;">
-                        {{ $sisaKuota }} dari {{ $kuota->kuota_max }} tersedia
+                      <span class="info-value {{ ($sisaKuota ?? 0) > 0 ? 'kuota-hijau' : 'kuota-merah' }}" style="font-weight: 700; font-size: 16px;">
+                        {{ $sisaKuota ?? 0 }} dari {{ $kuota->kuota_max ?? 0 }} tersedia
                       </span>
                     </div>
 
                     @if($kuotaTersedia)
                       @php
-                        $user = auth()->user();
-                        $dokumen = \App\Models\Dokumen::where('user_id', $user->id)->first();
-                        $dokumenLengkap = $dokumen && !empty($dokumen->cv) && !empty($dokumen->surat_pengantar) && !empty($dokumen->proposal);
+                        // Gunakan $dokumenLengkap dari controller yang sudah di-cache
+                        // Tidak perlu query lagi di view untuk performa lebih cepat
                       @endphp
                       @if(isset($memilikiPermohonanAktif) && $memilikiPermohonanAktif)
                         <button class="btn-ajukan" disabled style="background: #9CA3AF; cursor: not-allowed;">
@@ -408,11 +417,11 @@
                         <p style="margin: 12px 0 0 0; font-size: 13px; color: #6B7280; text-align: center; padding: 8px; background: #F3F4F6; border-radius: 6px;">
                           ⚠️ @if(isset($cekDaftar) && !empty($cekDaftar['alasan'])){{ $cekDaftar['alasan'] }}@else Anda sudah memiliki permohonan yang sedang diproses. Satu akun hanya dapat mendaftar untuk 1 divisi lowongan magang. Cek status di menu Status Lamaran.@endif
                         </p>
-                      @elseif($dokumenLengkap)
+                      @elseif($dokumenLengkap && isset($dokumen) && $dokumen && isset($dokumen->id))
                         <form action="{{ route('pendaftar.store_permohonan') }}" method="POST" style="margin-top: 20px;">
                           @csrf
-                          <input type="hidden" name="dokumen_id" value="{{ $dokumen->id }}">
-                          <input type="hidden" name="kuota_id" value="{{ $kuota->id }}">
+                          <input type="hidden" name="dokumen_id" value="{{ $dokumen->id ?? '' }}">
+                          <input type="hidden" name="kuota_id" value="{{ $kuota->id ?? '' }}">
                           <button type="submit" class="btn-ajukan">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

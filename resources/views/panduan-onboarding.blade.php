@@ -276,7 +276,7 @@
           <div class="info-card">
             <div class="info-card-header">
               <h2 class="info-card-title">Informasi Permohonan Magang</h2>
-              <span class="status-badge diterima">{{ $permohonan->status }}</span>
+              <span class="status-badge diterima">{{ optional($permohonan)->status }}</span>
             </div>
             
             <div class="info-grid">
@@ -311,7 +311,7 @@
               
               <div class="info-item">
                 <span class="info-label">Status</span>
-                <span class="info-value">{{ $permohonan->status }}</span>
+                <span class="info-value">{{ optional($permohonan)->status }}</span>
               </div>
             </div>
           </div>
@@ -430,6 +430,29 @@
             </div>
           </div>
           
+          <!-- Surat Kerja (SK) Download Section -->
+          @if(!empty($permohonan->surat_kerja))
+            <div class="info-card" style="background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border: 2px solid #10B981;">
+              <div class="info-card-header">
+                <h2 class="info-card-title">📄 Surat Kerja (SK)</h2>
+              </div>
+              
+              <div style="padding: 20px; background: #FFFFFF; border-radius: 12px; border: 1px solid #A7F3D0;">
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #374151; line-height: 1.6;">
+                  Surat Kerja dari instansi telah tersedia. Email notifikasi juga telah dikirim ke <strong>{{ $user->email }}</strong>. Silakan unduh file berikut untuk keperluan administrasi Anda.
+                </p>
+                <a href="{{ route('download.sk') }}" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Download Surat Kerja (SK)
+                </a>
+              </div>
+            </div>
+          @endif
+          
           <!-- Informasi Tambahan -->
           <div class="info-card">
             <div class="info-card-header">
@@ -443,6 +466,9 @@
               <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #6B7280; line-height: 1.8;">
                 <li>Pastikan semua data diri Anda sudah lengkap dan benar</li>
                 <li>Simpan informasi periode dan jadwal magang Anda</li>
+                @if(!empty($permohonan->surat_kerja))
+                  <li>Unduh Surat Kerja (SK) di atas jika sudah tersedia</li>
+                @endif
                 <li>Hubungi admin jika ada perubahan data atau pertanyaan</li>
                 <li>Persiapkan diri untuk memulai magang sesuai jadwal yang telah ditentukan</li>
               </ul>

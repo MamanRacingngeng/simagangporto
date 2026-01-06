@@ -145,6 +145,8 @@ body, html {
   transition: all 0.2s ease;
   position: relative;
   margin: 2px 0;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item .nav-icon {
@@ -172,26 +174,107 @@ body, html {
   flex: 1;
 }
 
+/* Sidebar Navigation Hover Effects - Bar biru di kiri dan ripple effect */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 4px;
+  height: 0;
+  background: #2563EB;
+  border-radius: 0 4px 4px 0;
+  transform: translateY(-50%);
+  transition: height 0.3s ease;
+  z-index: 1;
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  pointer-events: none;
+}
+
 .nav-item:hover {
   background: var(--blue-light);
   transform: translateX(4px);
   color: var(--blue-soft);
 }
 
+.nav-item:hover::before {
+  height: 60%;
+}
+
+.nav-item:hover::after {
+  width: 200px;
+  height: 200px;
+}
+
 .nav-item:hover .nav-icon {
   color: var(--blue-soft);
+  transform: scale(1.1) rotate(5deg);
+  transition: transform 0.3s ease;
 }
 
-/* Highlight untuk menu aktif */
+.nav-item:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+/* Highlight untuk menu aktif - Biru jelas dan elegan */
+/* Active state - Biru jelas dan elegan - HIGH SPECIFICITY */
+aside.sidebar .nav .nav-item.active,
+.sidebar .nav .nav-item.active,
 .nav-item.active {
-  background: #EFF6FF;
-  color: #2563EB;
-  font-weight: 600;
-  border-left: 3px solid #2563EB;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+  border-left: 4px solid #FFFFFF !important;
 }
 
-.nav-item.active .nav-icon {
-  color: var(--gold-batik);
+aside.sidebar .nav .nav-item.active .nav-icon,
+.sidebar .nav .nav-item.active .nav-icon,
+.nav-item.active .nav-icon,
+.nav-item.active .nav-icon svg {
+  color: #FFFFFF !important;
+  fill: none !important;
+}
+
+aside.sidebar .nav .nav-item.active .nav-label,
+.sidebar .nav .nav-item.active .nav-label,
+.nav-item.active .nav-label {
+  color: #FFFFFF !important;
+}
+
+aside.sidebar .nav .nav-item.active::before,
+.sidebar .nav .nav-item.active::before,
+.nav-item.active::before {
+  background: #FFFFFF !important;
+  height: 60% !important;
+  width: 4px !important;
+  opacity: 1 !important;
+}
+
+aside.sidebar .nav .nav-item.active::after,
+.sidebar .nav .nav-item.active::after,
+.nav-item.active::after {
+  display: none !important;
+}
+
+/* Override hover state untuk active item */
+aside.sidebar .nav .nav-item.active:hover,
+.sidebar .nav .nav-item.active:hover,
+.nav-item.active:hover {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
 }
 
 .cta {

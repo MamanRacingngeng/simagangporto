@@ -1,14 +1,28 @@
-<section id="beranda" class="relative w-full flex flex-col items-center justify-center text-white hero-batik" style="background-image: url('/images/BagroundDashboard.jpg'); background-size: cover; background-position: center center; background-attachment: fixed; margin: 0; padding: 0; min-height: 100vh;">
+<section id="beranda" class="relative w-full flex flex-col items-center justify-center text-white hero-batik" style="background-image: url('/images/BagroundDashboard.jpg'); background-size: cover; background-position: center center; background-attachment: scroll; margin: 0; padding: 0; min-height: 100vh;">
+    {{-- Preload hero image untuk loading lebih cepat --}}
+    <link rel="preload" as="image" href="/images/BagroundDashboard.jpg">
     <style>
+        .hero-batik {
+            background-size: cover;
+            background-repeat: no-repeat;
+            will-change: transform; /* Optimasi rendering */
+        }
+        
+        /* Optimasi untuk mobile */
         @media (max-width: 768px) {
             .hero-batik {
                 background-attachment: scroll !important;
             }
         }
         
-        .hero-batik {
-            background-size: cover;
-            background-repeat: no-repeat;
+        /* Loading state */
+        .hero-batik::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
     </style>
     {{-- Filter hitam dengan gradient yang fleksibel ke bawah --}}

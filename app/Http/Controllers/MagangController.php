@@ -10,6 +10,7 @@ use App\Models\JadwalMagang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\CacheHelper;
 
 class MagangController extends Controller
 {
@@ -83,10 +84,40 @@ class MagangController extends Controller
                 'status' => 'Diajukan', // Sesuai ERD: status default "Diajukan"
             ]);
             
-            // Jika ada kuota_id di request, hubungkan ke permohonan
+            // Jika ada kuota_id di request, hubungkan ke permohonan dan simpan backup
             if ($request->has('kuota_id')) {
                 $permohonan->kuotaMagang()->attach($request->kuota_id);
+                
+                // Simpan backup informasi kuota/jadwal untuk riwayat meskipun kuota sudah dihapus
+                $kuota = KuotaMagang::find($request->kuota_id);
+                if ($kuota) {
+                    // Cari jadwal yang sesuai dengan periode dan posisi
+                    $jadwal = JadwalMagang::where('periode', $kuota->periode)
+                        ->where(function($q) use ($kuota) {
+                            $posisi = $kuota->posisi ?? 'Umum';
+                            $q->where('posisi', $posisi)
+                              ->orWhere(function($q2) use ($posisi) {
+                                  $q2->whereNull('posisi')->where('posisi', 'Umum');
+                              });
+                        })
+                        ->first();
+                    
+                    // Jika tidak ditemukan dengan posisi, coba cari hanya dengan periode
+                    if (!$jadwal) {
+                        $jadwal = JadwalMagang::where('periode', $kuota->periode)->first();
+                    }
+                    
+                    $permohonan->update([
+                        'periode_backup' => $kuota->periode,
+                        'posisi_backup' => $kuota->posisi ?? 'Umum',
+                        'tgl_mulai_backup' => $jadwal ? $jadwal->tgl_mulai : null,
+                        'tgl_selesai_backup' => $jadwal ? $jadwal->tgl_selesai : null,
+                    ]);
+                }
             }
+            
+            // Cache will be cleared by Observer, but clear user cache too
+            CacheHelper::clearUserCache($user->id);
 
             return redirect()->route('riwayat.lamaran')
                 ->with('success', 'Permohonan magang berhasil diajukan. Status: Diajukan. Lihat detail di riwayat lamaran Anda.');

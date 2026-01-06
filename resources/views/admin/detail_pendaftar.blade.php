@@ -288,6 +288,77 @@
         box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
     }
 
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #F59E0B;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+
+    .tipe-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .tipe-option {
+        padding: 12px 16px;
+        border: 2px solid #E5E7EB;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+    }
+
+    .tipe-option input[type="radio"] {
+        display: none;
+    }
+
+    .tipe-option input[type="radio"]:checked + label {
+        font-weight: 600;
+    }
+
+    .tipe-option:has(input[type="radio"]:checked) {
+        border-color: #F59E0B;
+        background: #FEF7ED;
+    }
+
+    .tipe-option label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 14px;
+        color: #374151;
+        display: block;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .form-check input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .form-check label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 14px;
+        color: #374151;
+    }
+
     .modal-actions {
         display: flex;
         gap: 12px;
@@ -392,8 +463,23 @@
 </div>
 
 @if(session('success'))
-    <div style="padding:16px;background:#ECFDF5;border-left:4px solid #10B981;border-radius:8px;margin-bottom:24px;color:#065F46;animation: fadeIn 0.3s ease-out">
-        {{ session('success') }}
+    <div style="padding:20px;background:linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);border-left:4px solid #10B981;border-radius:12px;margin-bottom:24px;color:#065F46;animation: fadeIn 0.3s ease-out;box-shadow:0 4px 12px rgba(16, 185, 129, 0.15);">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="flex-shrink:0;margin-top:2px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:#10B981;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:16px;margin-bottom:4px;color:#065F46;">
+                    ✅ Berhasil
+                </div>
+                <div style="font-size:14px;line-height:1.6;color:#047857;">
+                    {{ session('success') }}
+                </div>
+            </div>
+        </div>
     </div>
 @endif
 
@@ -464,10 +550,10 @@
                     @php
                     @endphp
                     @php
-                        $statusClass = strtolower($permohonan->status ?? 'default');
+                        $statusClass = strtolower(optional($permohonan)->status ?? 'default');
                     @endphp
                     <span class="status-badge {{ $statusClass }}">
-                        {{ $permohonan->status }}
+                        {{ optional($permohonan)->status }}
                     </span>
                 </div>
             </div>
@@ -563,19 +649,25 @@
     <!-- Tab: Log Status -->
     <div id="tab-log-status" class="tab-content">
         <div class="log-item">
-            <div class="log-time">{{ $permohonan->created_at->format('d F Y, H:i') }}</div>
-            <div class="log-text">Permohonan dibuat dengan status: <strong>{{ $permohonan->status }}</strong></div>
+            <div class="log-time">{{ optional($permohonan->created_at)->format('d F Y, H:i') }}</div>
+            <div class="log-text">Permohonan dibuat dengan status: <strong>{{ optional($permohonan)->status }}</strong></div>
         </div>
-        @if($permohonan->updated_at != $permohonan->created_at)
+        @if(optional($permohonan->updated_at) && optional($permohonan->updated_at) != optional($permohonan->created_at))
             <div class="log-item">
-                <div class="log-time">{{ $permohonan->updated_at->format('d F Y, H:i') }}</div>
-                <div class="log-text">Status diperbarui menjadi: <strong>{{ $permohonan->status }}</strong></div>
+                <div class="log-time">{{ optional($permohonan->updated_at)->format('d F Y, H:i') }}</div>
+                <div class="log-text">Status diperbarui menjadi: <strong>{{ optional($permohonan)->status }}</strong></div>
             </div>
         @endif
         @if($permohonan->alasan_penolakan)
             <div class="log-item" style="border-left-color: #EF4444;">
                 <div class="log-time">Alasan Penolakan</div>
                 <div class="log-text" style="color: #991B1B;">{{ $permohonan->alasan_penolakan }}</div>
+            </div>
+        @endif
+        @if($permohonan->catatan_revisi)
+            <div class="log-item" style="border-left-color: #F59E0B;">
+                <div class="log-time">Catatan Revisi</div>
+                <div class="log-text" style="color: #92400E;">{{ $permohonan->catatan_revisi }}</div>
             </div>
         @endif
     </div>
@@ -585,29 +677,29 @@
 <div class="actions-section">
     <h2 class="actions-title">Aksi Verifikasi</h2>
     
-    @if($permohonan->status === 'Diajukan')
+    @if(optional($permohonan)->status === 'Diajukan')
         <!-- Aksi Verifikasi Dokumen -->
         <div class="action-buttons" style="margin-bottom: 24px;">
-            <form action="{{ route('admin.verifikasi_permohonan', $permohonan->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin menyetujui dokumen? Status akan diubah menjadi "Diverifikasi".')">
+            <form action="{{ route('admin.verifikasi_permohonan', $permohonan->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin menyetujui dokumen? Status akan diubah menjadi Diverifikasi.')">
                 @csrf
                 <button type="submit" class="btn-action btn-verify">
                     ✓ Setujui Dokumen (Status → Diverifikasi)
                 </button>
             </form>
-            <button type="button" class="btn-action btn-reject" onclick="openRejectionModalFromDiajukan()">
-                ✗ Tolak Dokumen (Status → Ditolak)
+            <button type="button" class="btn-action btn-warning" onclick="openRevisionModal()">
+                ↺ Minta Revisi (Status → Revisi)
             </button>
         </div>
         <p style="margin-top: 12px; font-size: 14px; color: #6B7280;">
-            Pilih salah satu: <strong>Setujui</strong> jika dokumen lengkap dan valid, atau <strong>Tolak</strong> jika dokumen tidak memenuhi syarat.
+            Pilih salah satu: <strong>Setujui</strong> jika dokumen lengkap dan valid, atau <strong>Minta Revisi</strong> jika dokumen perlu diperbaiki.
         </p>
         <p style="margin-top: 8px; font-size: 13px; color: #F59E0B; font-weight: 600;">
             ⚠️ Peringatan: Keputusan yang Anda pilih akan bersifat FINAL dan tidak dapat diubah kembali.
         </p>
     @endif
 
-    @if($permohonan->status === 'Diverifikasi')
-        <!-- Aksi 2: Keputusan (Diterima/Ditolak) -->
+    @if(optional($permohonan)->status === 'Diverifikasi')
+        <!-- Aksi Final: Hanya Diterima atau Ditolak (MUTLAK) -->
         <div class="action-buttons">
             <form action="{{ route('admin.update_status_permohonan', $permohonan->id) }}" method="POST" style="display: inline;">
                 @csrf
@@ -624,7 +716,7 @@
             ⚠️ Peringatan: Keputusan yang Anda pilih akan bersifat FINAL dan tidak dapat diubah kembali.
         </p>
         <p style="margin-top: 8px; font-size: 13px; color: #6B7280;">
-            Pilih salah satu: Terima permohonan atau Tolak dengan alasan
+            Pilih salah satu: <strong>Diterima</strong> atau <strong>Ditolak</strong> (MUTLAK).
         </p>
     @endif
 
@@ -657,6 +749,77 @@
                 </div>
             </div>
         </div>
+        
+        @if($permohonan->status === 'Diterima')
+            <!-- Upload Surat Kerja (SK) untuk Peserta Diterima -->
+            <div style="padding: 24px; background: #FFFFFF; border-radius: 12px; border: 2px solid #10B981; margin-top: 24px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #FFFFFF;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; color: #065F46; font-size: 18px; font-weight: 700;">
+                            Upload Surat Kerja (SK)
+                        </h4>
+                        <p style="margin: 0; color: #047857; font-size: 13px;">
+                            Unggah Surat Kerja dari instansi untuk peserta yang diterima. File ini akan dikirim ke email peserta dan tersedia untuk diunduh di dashboard.
+                        </p>
+                    </div>
+                </div>
+                
+                @if($permohonan->surat_kerja)
+                    <div style="padding: 16px; background: #ECFDF5; border-radius: 8px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #10B981;">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <div>
+                                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #065F46;">
+                                        Surat Kerja sudah diunggah
+                                    </p>
+                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #047857;">
+                                        {{ basename($permohonan->surat_kerja) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <a href="{{ asset('storage/' . $permohonan->surat_kerja) }}" target="_blank" style="padding: 8px 16px; background: #10B981; color: #FFFFFF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Lihat File
+                            </a>
+                        </div>
+                    </div>
+                @endif
+                
+                <form action="{{ route('admin.upload_sk', $permohonan->id) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151;">
+                            Pilih File Surat Kerja (PDF) <span style="color: #EF4444;">*</span>
+                        </label>
+                        <input type="file" name="surat_kerja" accept=".pdf" required style="width: 100%; padding: 12px; border: 2px dashed #D1D5DB; border-radius: 8px; background: #F9FAFB; font-size: 14px; cursor: pointer; transition: all 0.2s ease;" onchange="this.style.borderColor='#10B981'; this.style.background='#ECFDF5';">
+                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #6B7280;">
+                            Format file: PDF. Maksimal ukuran: 5MB. File akan dikirim ke email peserta secara otomatis.
+                        </p>
+                    </div>
+                    <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                        @if($permohonan->surat_kerja)
+                            Ganti Surat Kerja
+                        @else
+                            Upload Surat Kerja
+                        @endif
+                    </button>
+                </form>
+            </div>
+        @endif
     @endif
 </div>
 
@@ -687,6 +850,86 @@
                     @else
                         Tolak Permohonan (Final)
                     @endif
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Revisi -->
+<div id="revisionModal" class="modal">
+    <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3 class="modal-title">📝 Minta Revisi</h3>
+            <p class="modal-subtitle">Kirim permintaan revisi kepada pendaftar. Status permohonan akan otomatis berubah menjadi "Perlu di Revisi" dan pendaftar akan menerima notifikasi di dashboard serta email.</p>
+        </div>
+        
+        @if($permohonan && $permohonan->user)
+            <div style="background: #FEF7ED; border-left: 4px solid #F59E0B; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="font-size: 14px; font-weight: 600; color: #92400E; margin: 0 0 8px 0;">📋 Informasi Pendaftar</h4>
+                <p style="font-size: 13px; color: #78350F; margin: 4px 0;"><strong>Nama:</strong> {{ $permohonan->user->nama }}</p>
+                <p style="font-size: 13px; color: #78350F; margin: 4px 0;"><strong>Email:</strong> {{ $permohonan->user->email }}</p>
+                <p style="font-size: 13px; color: #78350F; margin: 4px 0;"><strong>Status Permohonan:</strong> <span style="color: #F59E0B; font-weight: 600;">{{ $permohonan->status }}</span></p>
+                <p style="font-size: 13px; color: #78350F; margin: 4px 0;"><strong>Tanggal Pengajuan:</strong> {{ $permohonan->created_at->format('d F Y') }}</p>
+            </div>
+        @endif
+
+        <form action="{{ route('admin.store_revisi') }}" method="POST" id="revisionForm" onsubmit="return confirm('Yakin ingin mengirim revisi? Status permohonan akan diubah menjadi \'Revisi\' dan pendaftar akan menerima notifikasi serta email.');">
+            @csrf
+            <input type="hidden" name="user_id" value="{{ $permohonan->user->id ?? '' }}">
+            <input type="hidden" name="permohonan_magang_id" value="{{ $permohonan->id ?? '' }}">
+            
+            <div class="form-group">
+                <label class="form-label">
+                    Judul Notifikasi <span style="color: #EF4444;">*</span>
+                </label>
+                <input type="text" name="judul" id="judul_notifikasi" class="form-control" value="{{ old('judul', 'Permohonan Magang Memerlukan Revisi') }}" required placeholder="Contoh: Permohonan Magang Memerlukan Revisi">
+                <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Judul notifikasi yang akan ditampilkan di dashboard pendaftar</p>
+            </div>
+
+            <input type="hidden" name="tipe" value="revisi">
+            
+            <div class="form-group">
+                <label class="form-label">
+                    Pesan Notifikasi <span style="color: #EF4444;">*</span>
+                </label>
+                <textarea 
+                    name="pesan" 
+                    id="pesan_notifikasi"
+                    class="form-textarea" 
+                    placeholder="Tuliskan pesan notifikasi yang akan dikirim kepada pendaftar..."
+                    required
+                    style="min-height: 150px;"
+                >{{ old('pesan', 'Kepada Yth. Pendaftar Magang,
+
+Permohonan magang Anda memerlukan revisi. Silakan perbaiki dokumen sesuai instruksi di bawah ini.
+
+📋 Catatan Revisi:
+
+[Mohon sebutkan bagian dokumen yang perlu diperbaiki, contoh: CV, Surat Pengantar, atau Proposal]
+
+Mohon perbaiki dokumen yang disebutkan di atas. Setelah dokumen diperbaiki, silakan unggah ulang melalui dashboard Anda. Status lamaran Anda akan berubah menjadi "Perlu di Revisi" sampai dokumen yang diperbaiki telah diunggah ulang.
+
+⚠️ Penting: Pastikan semua dokumen yang diminta telah dilengkapi dengan benar sebelum mengunggah ulang.
+
+Jika ada pertanyaan, silakan hubungi kami melalui email atau hubungi admin sistem.
+
+Terima kasih.') }}</textarea>
+                <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Pesan ini akan ditampilkan di dashboard pendaftar, dikirim via email, dan status lamaran akan berubah menjadi "Perlu di Revisi"</p>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" name="kirim_email" id="kirim_email" value="1" {{ old('kirim_email', true) ? 'checked' : '' }}>
+                    <label for="kirim_email">Kirim juga via email</label>
+                </div>
+                <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Notifikasi akan dikirim ke email pendaftar selain disimpan di sistem</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeRevisionModal()">Batal</button>
+                <button type="submit" class="btn-submit-modal" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);">
+                    Kirim Revisi
                 </button>
             </div>
         </form>
@@ -735,6 +978,42 @@ function closeRejectionModal() {
 document.getElementById('rejectionModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeRejectionModal();
+    }
+});
+
+// Revision modal handlers
+function openRevisionModal() {
+    document.getElementById('revisionModal').classList.add('active');
+}
+
+function openRevisionModalFromDiajukan() {
+    // Pastikan form action tetap menggunakan route store_revisi
+    const form = document.getElementById('revisionForm');
+    if (form) {
+        // Form action sudah benar di HTML, tidak perlu diubah
+        // form.action = '{{ route("admin.store_revisi") }}';
+    }
+    openRevisionModal();
+}
+
+function openRevisionModalFromDiverifikasi() {
+    // Pastikan form action tetap menggunakan route store_revisi
+    const form = document.getElementById('revisionForm');
+    if (form) {
+        // Form action sudah benar di HTML, tidak perlu diubah
+        // form.action = '{{ route("admin.store_revisi") }}';
+    }
+    openRevisionModal();
+}
+
+function closeRevisionModal() {
+    document.getElementById('revisionModal').classList.remove('active');
+}
+
+// Close modal when clicking outside
+document.getElementById('revisionModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRevisionModal();
     }
 });
 </script>

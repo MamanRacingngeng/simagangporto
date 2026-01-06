@@ -6,11 +6,25 @@
 
     <title>@yield('title', 'BBKB Yogyakarta - Magang')</title>
 
+    {{-- Resource Hints untuk performa lebih cepat --}}
+    <link rel="dns-prefetch" href="{{ url('/') }}">
+    @auth
+    <link rel="prefetch" href="{{ route('dashboard') }}" as="document">
+    <link rel="prefetch" href="{{ route('lowongan') }}" as="document">
+    <link rel="prefetch" href="{{ route('lamaran') }}" as="document">
+    @else
+    <link rel="prefetch" href="{{ route('login') }}" as="document">
+    <link rel="prefetch" href="{{ route('register') }}" as="document">
+    @endauth
+
     {{-- Tailwind CDN --}}
     <script src="https://cdn.tailwindcss.com"></script>
 
-    {{-- Google Font --}}
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    {{-- Google Font dengan optimasi loading --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet"></noscript>
 
     {{-- Style tambahan --}}
     <style>
@@ -112,6 +126,11 @@
 
     {{-- FOOTER --}}
     @include('components.footer')
+</main>
+
+    {{-- Global UI (toasts) and PJAX/nav enhancements --}}
+    @include('partials.global_ui')
+    @include('partials.nav_enhance')
 
 </body>
 </html>

@@ -22,6 +22,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register observer untuk sinkronisasi kuota
-        PermohonanMagang::observe(PermohonanMagangObserver::class);
+        // Hanya register jika database connection tersedia
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('permohonan_magang')) {
+                PermohonanMagang::observe(PermohonanMagangObserver::class);
+            }
+        } catch (\Exception $e) {
+            // Jika database tidak tersedia atau tabel belum ada, skip observer registration
+            \Log::warning('Cannot register PermohonanMagangObserver: ' . $e->getMessage());
+        }
     }
 }

@@ -93,9 +93,11 @@
                 {!! nl2br(e($pesan)) !!}
             </div>
             
-            <p>Silakan lengkapi persyaratan yang kurang agar proses verifikasi dapat dilanjutkan. Anda dapat mengakses dashboard untuk melihat detail dan memperbaiki dokumen.</p>
+            <p>Silakan perbaiki dokumen sesuai catatan revisi di atas. Setelah dokumen diperbaiki, silakan unggah ulang melalui dashboard Anda. Status lamaran Anda akan berubah menjadi "Revisi" sampai dokumen yang diperbaiki telah diunggah ulang.</p>
             
-            <a href="{{ route('dashboard') }}" class="button">Buka Dashboard</a>
+            <p style="margin-top: 15px; color: #92400E; font-weight: 600;">⚠️ Penting: Pastikan semua dokumen yang diminta telah dilengkapi dengan benar sebelum mengunggah ulang.</p>
+            
+            <a href="{{ route('lamaran') }}" class="button" style="margin-top: 20px;">Buka Halaman Lamaran Saya</a>
         </div>
         
         <div class="footer">

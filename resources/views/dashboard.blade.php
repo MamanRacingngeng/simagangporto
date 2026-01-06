@@ -4,10 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard - Magang Digital</title>
+    {{-- Resource Hints untuk performa lebih cepat --}}
+    <link rel="dns-prefetch" href="{{ url('/') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+    {{-- Font loading optimasi - non-blocking --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    {{-- CSS dengan preload untuk faster rendering --}}
+    <link rel="preload" href="{{ asset('css/dashboard.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ asset('css/dashboard.css') }}"></noscript>
+    {{-- JS dengan defer untuk non-blocking --}}
     <script src="{{ asset('js/dashboard.js') }}" defer></script>
     <style>
       * { 
@@ -18,12 +25,17 @@
       
       body { 
         margin: 0; 
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         font-size: 14px;
         line-height: 1.5;
         color: #1F2937;
+      }
+      
+      /* Font fallback untuk faster initial render */
+      body.loaded {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
       }
       
       .dashboard-body {
@@ -139,6 +151,58 @@
         transform: translateY(0) scale(0.98);
       }
       
+      .btn-beranda {
+        padding: 10px 18px;
+        background: linear-gradient(135deg, #F4B400 0%, #fbbf24 100%);
+        border: 1px solid rgba(11, 16, 32, 0.15);
+        border-radius: 10px;
+        color: #0b1020;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(244, 180, 0, 0.2);
+      }
+      
+      .btn-beranda::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(11, 16, 32, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+        pointer-events: none;
+      }
+      
+      .btn-beranda:hover {
+        background: linear-gradient(135deg, #fbbf24 0%, #F4B400 100%);
+        color: #0b1020;
+        border-color: rgba(11, 16, 32, 0.25);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(244, 180, 0, 0.3);
+      }
+      
+      .btn-beranda:hover::after {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .btn-beranda:active {
+        transform: translateY(0) scale(0.97);
+        background: linear-gradient(135deg, #f59e0b 0%, #F4B400 100%);
+      }
+      
       .btn-logout {
         padding: 10px 18px;
         background: #FFFFFF;
@@ -188,8 +252,18 @@
       
       @media (hover: none) and (pointer: coarse) {
         .user-greeting:active,
+        .btn-beranda:active,
         .btn-logout:active {
           transform: scale(0.95);
+        }
+      }
+      
+      @media (max-width: 768px) {
+        .btn-beranda span {
+          display: none;
+        }
+        .btn-beranda {
+          padding: 10px 12px;
         }
       }
       
@@ -306,58 +380,7 @@
         }
       }
       
-      /* Sidebar Navigation Animations */
-      .nav-item {
-        position: relative;
-        overflow: hidden;
-        -webkit-tap-highlight-color: transparent;
-      }
-      
-      .nav-item::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 4px;
-        height: 0;
-        background: #2563EB;
-        border-radius: 0 4px 4px 0;
-        transform: translateY(-50%);
-        transition: height 0.3s ease;
-        z-index: 1;
-      }
-      
-      .nav-item::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(59, 130, 246, 0.1);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
-        pointer-events: none;
-      }
-      
-      .nav-item:hover::before {
-        height: 60%;
-      }
-      
-      .nav-item:hover::after {
-        width: 200px;
-        height: 200px;
-      }
-      
-      .nav-item:active {
-        transform: translateX(2px) scale(0.98);
-      }
-      
-      .nav-item:hover .nav-icon {
-        transform: scale(1.1) rotate(5deg);
-        transition: transform 0.3s ease;
-      }
+      /* Sidebar Navigation Animations - CSS sudah dipindahkan ke dashboard.css global untuk semua halaman */
       
       .nav-item:active .nav-icon {
         transform: scale(0.95) rotate(-2deg);
@@ -1154,110 +1177,162 @@
         font-weight: 500;
       }
       
-      /* Notification Item */
-      .notification-item {
-        padding: 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .notification-item.info {
-        background: #EFF6FF;
-        border-left: 4px solid #3B82F6;
-      }
-      
-      .notification-item.warning {
-        background: #FEF3C7;
-        border-left: 4px solid #F59E0B;
-      }
-      
-      .notification-item.error {
-        background: #FEE2E2;
-        border-left: 4px solid #EF4444;
-      }
-      
-      .notification-item.success {
-        background: #ECFDF5;
-        border-left: 4px solid #10B981;
-      }
-      
-      .notification-item:hover {
-        transform: translateX(4px);
-      }
-      
-      .notification-content {
+      /* Notification Banner - Simple & Clean Design */
+      .notification-banner {
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 16px;
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 12px;
+        gap: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       }
       
-      .notification-text-wrapper {
+      .notification-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      
+      .notification-banner:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+      }
+      
+      .notification-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex: 1;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .notification-banner-icon {
+        font-size: 32px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      
+      .notification-banner-text {
         flex: 1;
       }
       
-      .notification-title {
-        margin: 0 0 8px 0;
-        font-size: 16px;
-        font-weight: 600;
-      }
-      
-      .notification-item.info .notification-title {
-        color: #1E40AF;
-      }
-      
-      .notification-item.warning .notification-title {
-        color: #92400E;
-      }
-      
-      .notification-item.error .notification-title {
-        color: #991B1B;
-      }
-      
-      .notification-item.success .notification-title {
-        color: #065F46;
-      }
-      
-      .notification-message {
-        margin: 0 0 8px 0;
-        font-size: 14px;
-        color: #374151;
-        line-height: 1.6;
-      }
-      
-      .notification-time {
-        margin: 0;
-        font-size: 12px;
-        color: #6B7280;
-      }
-      
-      .notification-badge {
-        background: #DC2626;
+      .notification-banner-title {
         color: #FFFFFF;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        line-height: 1.3;
+      }
+      
+      .notification-banner-message {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        margin: 0;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      
+      .notification-banner-button {
+        background: #FFFFFF;
+        color: #2563EB;
+        padding: 10px 20px;
+        border-radius: 10px;
         font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        position: relative;
+        z-index: 1;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
       
-      .notification-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+      .notification-banner-button:hover {
+        background: #F3F4F6;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
       
-      .notification-mark-read-btn {
-        background: transparent;
+      /* Warna button berdasarkan tipe */
+      .notification-banner[style*="F59E0B"] .notification-banner-button,
+      .notification-banner[style*="D97706"] .notification-banner-button {
+        color: #D97706;
+      }
+      
+      .notification-banner[style*="EF4444"] .notification-banner-button,
+      .notification-banner[style*="DC2626"] .notification-banner-button {
+        color: #DC2626;
+      }
+      
+      .notification-banner[style*="10B981"] .notification-banner-button,
+      .notification-banner[style*="059669"] .notification-banner-button {
+        color: #059669;
+      }
+      
+      .notification-banner-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(255, 255, 255, 0.2);
         border: none;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
-        padding: 4px;
-        color: #6B7280;
-        opacity: 0.6;
+        transition: all 0.2s ease;
+        z-index: 2;
       }
       
-      .notification-mark-read-btn:hover {
-        opacity: 1;
+      .notification-banner-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      
+      .notification-banner-close svg {
+        width: 18px;
+        height: 18px;
+        color: #FFFFFF;
+      }
+      
+      .notification-banner-mark-read {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #FFFFFF;
+        flex-shrink: 0;
+      }
+      
+      .notification-banner-mark-read:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: scale(1.1);
       }
       
       /* Responsive */
@@ -1292,11 +1367,29 @@
     </style>
   </head>
   <body class="dashboard-body">
+    <script>
+      // Mark body as loaded when fonts are ready
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          document.body.classList.add('loaded');
+        });
+      } else {
+        // Fallback for browsers without font loading API
+        setTimeout(() => document.body.classList.add('loaded'), 100);
+      }
+    </script>
     <div class="dashboard-wrap">
       @include('partials.sidebar')
       <main class="main">
         <div class="topbar">
           <div class="topbar-right">
+            <a href="{{ route('home') }}" class="btn-beranda" title="Kembali ke Beranda">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Beranda</span>
+            </a>
             <div class="user-greeting">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1437,53 +1530,51 @@
               </div>
             @endif
 
-            <!-- Notifikasi dari Admin -->
+            <!-- Notifikasi dari Admin - Style seperti Lowongan Banner -->
+            {{-- Debug: {{ isset($notifikasi) ? 'Notifikasi ada, count: ' . $notifikasi->count() : 'Notifikasi tidak ada' }} --}}
             @if(isset($notifikasi) && $notifikasi->count() > 0)
-              <div style="margin-bottom: 32px;">
-                <div class="status-card">
-                  <div class="status-header">
-                    <h2 class="status-title">📬 Notifikasi</h2>
-                    <span class="notification-badge">
-                      {{ $notifikasi->count() }} baru
-                    </span>
-                  </div>
-                  <div class="notification-actions">
-                    @foreach($notifikasi as $notif)
-                      @php
-                        $tipe = $notif->tipe ?? 'info';
-                      @endphp
-                      <div class="notification-item {{ $tipe }} notification-item-clickable" 
-                           data-notif-id="{{ $notif->id }}"
-                           data-mark-read-id="{{ $notif->id }}">
-                        <div class="notification-content">
-                          <div class="notification-text-wrapper">
-                            <h3 class="notification-title">
-                              {{ $notif->judul }}
-                            </h3>
-                            <p class="notification-message">
-                              {!! nl2br(e($notif->pesan)) !!}
-                            </p>
-                            <p class="notification-time">
-                              {{ $notif->created_at->diffForHumans() }}
-                            </p>
-                          </div>
-                          <form action="{{ route('notifikasi.baca', $notif->id) }}" method="POST" style="display: inline;" id="form-read-{{ $notif->id }}">
-                            @csrf
-                            <button type="button" 
-                                    data-mark-read-id="{{ $notif->id }}"
-                                    class="notification-mark-read-btn btn-mark-read"
-                                    title="Tandai sudah dibaca">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                              </svg>
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    @endforeach
+              @foreach($notifikasi as $notif)
+                @php
+                  $tipe = $notif->tipe ?? 'info';
+                  // Warna gradient berdasarkan tipe - untuk revisi gunakan orange/warning
+                  $gradients = [
+                    'info' => 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                    'warning' => 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    'revisi' => 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    'error' => 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                    'success' => 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  ];
+                  $gradient = $gradients[$tipe] ?? $gradients['info'];
+                  
+                  // Icon berdasarkan tipe - untuk revisi gunakan warning icon
+                  $icons = [
+                    'info' => '📬',
+                    'warning' => '⚠️',
+                    'revisi' => '⚠️',
+                    'error' => '❌',
+                    'success' => '✅',
+                  ];
+                  $icon = $icons[$tipe] ?? $icons['info'];
+                @endphp
+                <div class="lowongan-banner" id="notification-{{ $notif->id }}" style="background: {{ $gradient }}; margin-bottom: 16px; position: relative;">
+                  <button type="button" class="notification-banner-close" onclick="closeNotification({{ $notif->id }})" title="Tutup" style="position: absolute; top: 12px; right: 12px; background: rgba(255, 255, 255, 0.2); border: none; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; z-index: 2;">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; color: #FFFFFF;">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <div class="lowongan-banner-content">
+                    <div style="flex: 1;">
+                      <h3 class="lowongan-banner-title">
+                        {{ $icon }} {{ $notif->judul }}
+                      </h3>
+                      <p style="color: rgba(255, 255, 255, 0.95); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">
+                        {{ \Illuminate\Support\Str::limit(strip_tags($notif->pesan), 120) }}
+                      </p>
+                    </div>
+                    <a href="{{ route('riwayat.lamaran') }}" class="lowongan-banner-btn">Lihat Detail →</a>
                   </div>
                 </div>
-              </div>
+              @endforeach
             @endif
 
             <!-- Status Lamaran Terbaru -->
@@ -1510,10 +1601,15 @@
                       @foreach($permohonanTerbaru as $permohonan)
                         <tr>
                           <td style="font-weight: 500;">
-                            @if($permohonan->kuotaMagang->count() > 0)
-                              Magang Periode {{ $permohonan->kuotaMagang->first()->periode }}
+                            @php
+                              $kuota = $permohonan->kuotaMagang->first();
+                            @endphp
+                            @if($kuota && !empty($kuota->periode))
+                              Magang Periode {{ $kuota->periode }}
+                            @elseif($kuota && !empty($kuota->posisi))
+                              Magang {{ $kuota->posisi }}
                             @else
-                              Magang {{ $permohonan->kuotaMagang->first()->periode ?? 'BBKB' }}
+                              Magang BBKB
                             @endif
                           </td>
                           <td style="color: #6B7280;">
@@ -1526,8 +1622,9 @@
                                 'Diverifikasi' => ['bg' => '#FEF3C7', 'text' => '#F59E0B', 'label' => 'Diverifikasi'],
                                 'Diterima' => ['bg' => '#D1FAE5', 'text' => '#10B981', 'label' => 'Diterima'],
                                 'Ditolak' => ['bg' => '#FEE2E2', 'text' => '#EF4444', 'label' => 'Ditolak'],
+                                'Revisi' => ['bg' => '#FEF3C7', 'text' => '#F59E0B', 'label' => 'Perlu di Revisi'],
                               ];
-                              $status = $statusColors[$permohonan->status] ?? ['bg' => '#F3F4F6', 'text' => '#6B7280', 'label' => $permohonan->status];
+                              $status = $statusColors[optional($permohonan)->status ?? ''] ?? ['bg' => '#F3F4F6', 'text' => '#6B7280', 'label' => optional($permohonan)->status ?? 'Unknown'];
                             @endphp
                             <span class="status-badge" data-bg="{{ $status['bg'] }}" data-text="{{ $status['text'] }}">
                               {{ $status['label'] }}
@@ -1587,6 +1684,34 @@
       }
     }
     
+    // Fungsi untuk menutup notifikasi tanpa menandai sebagai sudah dibaca
+    function closeNotification(notifId) {
+      const notification = document.getElementById('notification-' + notifId);
+      if (notification) {
+        // Simpan status di localStorage agar tidak muncul lagi di sesi ini
+        localStorage.setItem('closed_notification_' + notifId, 'true');
+        // Sembunyikan dengan animasi
+        notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 300);
+      }
+    }
+    
+    // Cek notifikasi yang sudah ditutup saat halaman dimuat
+    // Hapus localStorage saat refresh agar notifikasi muncul lagi
+    document.addEventListener('DOMContentLoaded', function() {
+      // Hapus semua closed_notification dari localStorage saat halaman dimuat
+      // Ini akan membuat notifikasi muncul lagi setelah refresh
+      Object.keys(localStorage).forEach(function(key) {
+        if (key.startsWith('closed_notification_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    });
+    
     // Handle notification item clicks and mark as read buttons
     document.addEventListener('DOMContentLoaded', function() {
       // Set status badge styles from data attributes
@@ -1599,23 +1724,13 @@
         }
       });
       
-      // Handle notification item clicks
-      document.querySelectorAll('[data-mark-read-id]').forEach(function(element) {
-        element.addEventListener('click', function(e) {
-          // Don't trigger if clicking on the mark read button
-          if (e.target.closest('.btn-mark-read')) {
-            return;
-          }
-          const notifId = this.getAttribute('data-mark-read-id');
-          if (notifId) {
-            markAsRead(notifId);
-          }
-        });
-      });
+      // Handle notification item clicks - redirect to riwayat lamaran
+      // Mark as read is now handled by the mark read button only
       
       // Handle mark as read button clicks
       document.querySelectorAll('.btn-mark-read').forEach(function(button) {
         button.addEventListener('click', function(e) {
+          e.preventDefault(); // Prevent link navigation
           e.stopPropagation(); // Prevent triggering parent click
           const notifId = this.getAttribute('data-mark-read-id');
           if (notifId) {

@@ -49,5 +49,9 @@
         @yield('content')
     </main>
 
+    {{-- Global UI (toasts) and PJAX/nav enhancements --}}
+    @include('partials.global_ui')
+    @include('partials.nav_enhance')
+
 </body>
 </html>

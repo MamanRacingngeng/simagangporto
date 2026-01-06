@@ -4,6 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BBKB Yogyakarta - Magang</title>
+    {{-- Resource Hints untuk performa lebih cepat --}}
+    <link rel="dns-prefetch" href="{{ url('/') }}">
+    <link rel="prefetch" href="{{ route('login') }}" as="document">
+    <link rel="prefetch" href="{{ route('register') }}" as="document">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -32,7 +36,7 @@
       .user-profile .user-email{font-size:12px;opacity:.8;line-height:1.2}
       .user-profile .user-initial{width:40px;height:40px;border-radius:50%;background:rgba(11,16,32,.1);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#0b1020;border:2px solid rgba(11,16,32,.1)}
       .hero{position:relative;min-height:86vh;display:grid;align-items:center;overflow:hidden}
-      .hero-bg{position:absolute;inset:0;background:url('/images/baground.jpg'), url('/images/hero-batik.jpg') center/cover no-repeat;background-size:cover;background-position:center;filter:brightness(.55)}
+      .hero-bg{position:absolute;inset:0;background:url('/images/baground.jpg'), url('/images/hero-batik.jpg') center/cover no-repeat;background-size:cover;background-position:center;filter:brightness(.55);will-change:transform;transform:translateZ(0)}
       .hero-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,16,32,.2),rgba(11,16,32,.75))}
       .hero-content{position:relative;padding:90px 0;z-index:1}
       .kemen{display:flex;align-items:center;gap:16px;margin-bottom:18px;opacity:.98}
@@ -204,12 +208,12 @@
         </div>
 
         <div class="gallery">
-          <img src="/images/baground.jpg" alt="Kegiatan Magang">
-          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang">
-          <img src="/images/baground.jpg" alt="Kegiatan Magang">
-          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang">
-          <img src="/images/baground.jpg" alt="Kegiatan Magang">
-          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang">
+          <img src="/images/baground.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
+          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
+          <img src="/images/baground.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
+          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
+          <img src="/images/baground.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
+          <img src="/images/hero-batik.jpg" alt="Kegiatan Magang" loading="lazy" decoding="async">
         </div>
         <div style="margin-top:32px;text-align:center">
           <a class="btn btn-primary" href="{{ route('galeri-magang') }}">Lihat Galeri Magang <svg style="width:16px;height:16px;display:inline-block;margin-left:6px;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></a>
@@ -259,6 +263,9 @@
         </div>
       </div>
     </footer>
+    
+    {{-- Include PJAX navigation for faster page transitions --}}
+    @include('partials.nav_enhance')
   </body>
 </html>
 
