@@ -7,6 +7,7 @@ use App\Models\PermohonanMagang;
 use App\Models\Dokumen;
 use App\Models\KuotaMagang;
 use App\Models\JadwalMagang;
+use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -147,6 +148,16 @@ class PendaftarController extends Controller
                 'status' => 'Diajukan',
                 'catatan_revisi' => null, // Hapus catatan revisi karena sudah diperbaiki
             ]);
+            
+            // Tandai semua notifikasi revisi yang terkait dengan permohonan ini sebagai sudah dibaca
+            Notifikasi::where('user_id', $user->id)
+                ->where('permohonan_magang_id', $permohonanRevisi->id)
+                ->where('tipe', 'revisi')
+                ->where('dibaca', false)
+                ->update([
+                    'dibaca' => true,
+                    'dibaca_at' => now(),
+                ]);
             
             // Clear cache untuk memastikan perubahan langsung terlihat
             CacheHelper::clearUserCache($user->id);

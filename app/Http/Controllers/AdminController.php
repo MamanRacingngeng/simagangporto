@@ -239,7 +239,15 @@ class AdminController extends Controller
     public function lihatDataPendaftar(Request $request)
     {
         // Ambil semua permohonan dari database dengan filter status jika ada
-        $query = PermohonanMagang::with(['user:id,nama,email', 'dokumen:id,user_id,cv,surat_pengantar,proposal', 'kuotaMagang:id,periode,posisi']);
+        // Pastikan field surat_kerja di-load untuk cek status SK
+        $hasSuratKerjaColumn = DB::getSchemaBuilder()->hasColumn('permohonan_magang', 'surat_kerja');
+        $selectFields = ['id', 'user_id', 'dokumen_id', 'status', 'created_at', 'updated_at', 'tanggal_pengajuan'];
+        if ($hasSuratKerjaColumn) {
+            $selectFields[] = 'surat_kerja';
+        }
+        
+        $query = PermohonanMagang::with(['user:id,nama,email', 'dokumen:id,user_id,cv,surat_pengantar,proposal', 'kuotaMagang:id,periode,posisi'])
+            ->select($selectFields);
         
         // Filter berdasarkan status jika ada parameter
         if ($request->has('status') && $request->status) {
@@ -725,6 +733,9 @@ class AdminController extends Controller
                 'kuota_terpakai' => 0, // Sesuai ERD: kuota_terpakai
             ]);
 
+            // Clear semua cache yang terkait dengan lowongan
+            CacheHelper::clearLowonganCache();
+
             return back()->with('success', 'Kuota magang berhasil ditambahkan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -794,6 +805,9 @@ class AdminController extends Controller
                 'kuota_terpakai' => $request->kuota_terpakai,
             ]);
 
+            // Clear semua cache yang terkait dengan lowongan
+            CacheHelper::clearLowonganCache();
+
             return back()->with('success', 'Kuota magang berhasil diperbarui. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -825,6 +839,9 @@ class AdminController extends Controller
                 ->delete();
             
             $kuota->delete();
+            
+            // Clear semua cache yang terkait dengan lowongan
+            CacheHelper::clearLowonganCache();
             
             // Clear cache untuk semua user yang terpengaruh
             foreach ($userIds as $userId) {
@@ -885,6 +902,9 @@ class AdminController extends Controller
                 'tgl_selesai' => $request->tgl_selesai,
             ]);
 
+            // Clear semua cache yang terkait dengan lowongan (karena jadwal mempengaruhi lowongan)
+            CacheHelper::clearLowonganCache();
+
             return back()->with('success', 'Jadwal magang berhasil ditambahkan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -937,6 +957,9 @@ class AdminController extends Controller
                 'tgl_selesai' => $request->tgl_selesai,
             ]);
 
+            // Clear semua cache yang terkait dengan lowongan (karena jadwal mempengaruhi lowongan)
+            CacheHelper::clearLowonganCache();
+
             return back()->with('success', 'Jadwal magang berhasil diperbarui. Status permohonan pendaftar tidak terpengaruh.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -967,6 +990,9 @@ class AdminController extends Controller
                 ->unique();
             
             $jadwal->delete();
+            
+            // Clear semua cache yang terkait dengan lowongan (karena jadwal mempengaruhi lowongan)
+            CacheHelper::clearLowonganCache();
             
             // Clear cache untuk semua user yang terpengaruh
             foreach ($userIds as $userId) {
@@ -1534,60 +1560,178 @@ class AdminController extends Controller
                 ]);
             }
             
-            $request->validate([
-                'surat_kerja' => 'required|file|mimes:pdf|max:5120', // Max 5MB
-            ], [
+            // Validasi file - required hanya jika belum ada draft
+            $validationRules = [
+                'surat_kerja' => 'file|mimes:pdf|max:5120', // Max 5MB
+            ];
+            
+            if (empty($permohonan->surat_kerja)) {
+                $validationRules['surat_kerja'] = 'required|file|mimes:pdf|max:5120';
+            }
+            
+            $request->validate($validationRules, [
                 'surat_kerja.required' => 'File Surat Kerja wajib diunggah.',
                 'surat_kerja.file' => 'File yang diunggah tidak valid.',
                 'surat_kerja.mimes' => 'File harus berformat PDF.',
                 'surat_kerja.max' => 'Ukuran file maksimal 5MB.',
             ]);
             
+            // Jika tidak ada file yang diupload, tidak perlu update
+            if (!$request->hasFile('surat_kerja')) {
+                return back()->with('info', 'Tidak ada perubahan. File draft tetap sama.');
+            }
+            
             // Hapus file lama jika ada
-            if ($permohonan->surat_kerja && Storage::exists($permohonan->surat_kerja)) {
-                Storage::delete($permohonan->surat_kerja);
+            if ($permohonan->surat_kerja) {
+                $oldPath = $permohonan->surat_kerja;
+                // Cek di storage public
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                    Log::info("File SK lama dihapus: {$oldPath}");
+                }
             }
             
             // Simpan file baru
             $file = $request->file('surat_kerja');
+            if (!$file || !$file->isValid()) {
+                return back()->withErrors([
+                    'error' => 'File yang diunggah tidak valid.'
+                ])->withInput();
+            }
+            
             $fileName = 'sk_' . $permohonan->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             $filePath = $file->storeAs('surat_kerja', $fileName, 'public');
             
-            // Update database
-            $permohonan->update([
-                'surat_kerja' => $filePath
+            if (!$filePath) {
+                Log::error("Gagal menyimpan file SK untuk permohonan {$permohonan->id}");
+                return back()->withErrors([
+                    'error' => 'Gagal menyimpan file. Silakan coba lagi.'
+                ])->withInput();
+            }
+            
+            Log::info("File SK berhasil disimpan: {$filePath} untuk permohonan {$permohonan->id}");
+            
+            // Update database - gunakan save() langsung untuk memastikan update berjalan
+            $permohonan->surat_kerja = $filePath;
+            $saved = $permohonan->save();
+            
+            if (!$saved) {
+                Log::error("Gagal update database untuk permohonan {$permohonan->id}");
+                // Hapus file yang sudah diupload jika update database gagal
+                Storage::disk('public')->delete($filePath);
+                return back()->withErrors([
+                    'error' => 'Gagal menyimpan data ke database. Silakan coba lagi.'
+                ])->withInput();
+            }
+            
+            // Refresh untuk memastikan data terbaru
+            $permohonan->refresh();
+            
+            Log::info("Database berhasil di-update dengan surat_kerja (DRAFT): {$filePath} untuk permohonan {$permohonan->id}", [
+                'permohonan_id' => $permohonan->id,
+                'surat_kerja' => $permohonan->surat_kerja,
+                'file_exists' => Storage::disk('public')->exists($filePath),
             ]);
+            
+            // Clear cache
+            CacheHelper::clearUserCache($permohonan->user_id);
+            $cacheKeys = [
+                "dashboard_user_{$permohonan->user_id}",
+                "riwayat_user_{$permohonan->user_id}",
+                "notifikasi_user_{$permohonan->user_id}",
+            ];
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            
+            return back()->with('success', 'Surat Kerja berhasil diunggah sebagai draft. Klik "Kirim SK" untuk mengirim ke peserta.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error('Error uploading SK: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return back()->withErrors([
+                'error' => 'Terjadi kesalahan saat mengunggah Surat Kerja: ' . $e->getMessage() . '. Silakan coba lagi atau hubungi administrator.'
+            ])->withInput();
+        }
+    }
+
+    /**
+     * Kirim Surat Kerja (SK) ke peserta - setelah upload sebagai draft
+     */
+    public function kirimSK($id)
+    {
+        try {
+            $permohonan = PermohonanMagang::findOrFail($id);
+            
+            // Validasi: Hanya bisa kirim SK untuk status Diterima dan jika ada file SK
+            if ($permohonan->status !== 'Diterima') {
+                return back()->withErrors([
+                    'error' => 'Surat Kerja hanya dapat dikirim untuk permohonan dengan status "Diterima".'
+                ]);
+            }
+            
+            if (empty($permohonan->surat_kerja)) {
+                return back()->withErrors([
+                    'error' => 'Tidak ada Surat Kerja yang diunggah. Silakan upload terlebih dahulu.'
+                ]);
+            }
             
             // Kirim email ke user
             $user = $permohonan->user;
             $emailSent = false;
             $emailStatus = '';
             
+            if (!$user) {
+                Log::error("User tidak ditemukan untuk permohonan {$permohonan->id}");
+                return back()->withErrors([
+                    'error' => 'User tidak ditemukan untuk permohonan ini.'
+                ]);
+            }
+            
             try {
                 // Pastikan email user valid
                 if (empty($user->email) || !filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                     Log::warning("Email user tidak valid: {$user->email} untuk user {$user->id}");
-                    $emailStatus = ' (email tidak valid)';
-                } else {
-                    // Kirim email secara synchronous
-                    Mail::to($user->email)->send(
-                        new SuratKerjaTersedia($user, $permohonan)
-                    );
-                    $emailSent = true;
-                    Log::info("Email Surat Kerja berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}", [
-                        'user_id' => $user->id,
-                        'user_email' => $user->email,
-                        'permohonan_id' => $permohonan->id,
+                    return back()->withErrors([
+                        'error' => 'Email user tidak valid. Tidak dapat mengirim Surat Kerja.'
                     ]);
-                    $emailStatus = ' (termasuk email)';
                 }
+                
+                // Pastikan permohonan sudah di-refresh sebelum kirim email
+                $permohonanForEmail = PermohonanMagang::find($permohonan->id);
+                
+                // Kirim email secara synchronous
+                Mail::to($user->email)->send(
+                    new SuratKerjaTersedia($user, $permohonanForEmail)
+                );
+                $emailSent = true;
+                Log::info("Email Surat Kerja berhasil dikirim ke {$user->email} untuk permohonan {$permohonan->id}", [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'permohonan_id' => $permohonan->id,
+                    'surat_kerja' => $permohonanForEmail->surat_kerja,
+                ]);
+                
+                // Setelah email terkirim, hapus surat_kerja dari database (tampilan kembali ke form upload)
+                // File tetap ada di storage untuk user akses via route download
+                $permohonan->surat_kerja = null;
+                $permohonan->save();
+                
+                Log::info("Surat Kerja berhasil dikirim dan dihapus dari database (tampilan kembali ke form) untuk permohonan {$permohonan->id}");
+                
             } catch (\Swift_TransportException $e) {
                 Log::error("Gagal mengirim email Surat Kerja (Transport Error) ke {$user->email}: " . $e->getMessage(), [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'error' => $e->getMessage(),
                 ]);
-                $emailStatus = ' (email gagal dikirim - cek konfigurasi email di .env)';
+                return back()->withErrors([
+                    'error' => 'Gagal mengirim email. Silakan cek konfigurasi email di .env atau coba lagi nanti.'
+                ]);
             } catch (\Exception $e) {
                 Log::error("Gagal mengirim email Surat Kerja ke {$user->email}: " . $e->getMessage(), [
                     'user_id' => $user->id,
@@ -1595,7 +1739,9 @@ class AdminController extends Controller
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                $emailStatus = ' (email gagal dikirim, silakan cek log)';
+                return back()->withErrors([
+                    'error' => 'Gagal mengirim email. Silakan cek log untuk detail error.'
+                ]);
             }
             
             // Clear cache - pastikan semua cache terkait user di-clear
@@ -1609,28 +1755,76 @@ class AdminController extends Controller
                 Cache::forget($key);
             }
             
-            Log::info("Surat Kerja berhasil diunggah untuk permohonan {$permohonan->id}", [
-                'permohonan_id' => $permohonan->id,
-                'user_id' => $permohonan->user_id,
-                'file_path' => $filePath,
-                'email_sent' => $emailSent,
-            ]);
+            return back()->with('success', 'Surat Kerja berhasil dikirim ke ' . $user->email . '. Email notifikasi telah terkirim.');
             
-            $successMessage = 'Surat Kerja berhasil diunggah.';
-            if ($emailSent) {
-                $successMessage .= ' Email notifikasi telah dikirim ke ' . $user->email . '.';
-            } else {
-                $successMessage .= $emailStatus;
+        } catch (\Exception $e) {
+            Log::error('Error sending SK: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return back()->withErrors([
+                'error' => 'Terjadi kesalahan saat mengirim Surat Kerja. Silakan coba lagi atau hubungi administrator.'
+            ]);
+        }
+    }
+
+    /**
+     * Hapus Draft Surat Kerja (SK) - sebelum dikirim
+     */
+    public function hapusDraftSK($id)
+    {
+        try {
+            $permohonan = PermohonanMagang::findOrFail($id);
+            
+            // Validasi: Hanya bisa hapus draft SK untuk status Diterima
+            if ($permohonan->status !== 'Diterima') {
+                return back()->withErrors([
+                    'error' => 'Draft Surat Kerja hanya dapat dihapus untuk permohonan dengan status "Diterima".'
+                ]);
             }
             
-            return back()->with('success', $successMessage);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors())->withInput();
+            if (empty($permohonan->surat_kerja)) {
+                return back()->withErrors([
+                    'error' => 'Tidak ada draft Surat Kerja yang dapat dihapus.'
+                ]);
+            }
+            
+            // Hapus file dari storage
+            $filePath = $permohonan->surat_kerja;
+            if (Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
+                Log::info("File SK draft dihapus: {$filePath} untuk permohonan {$permohonan->id}");
+            }
+            
+            // Hapus dari database
+            $permohonan->surat_kerja = null;
+            $permohonan->save();
+            
+            // Clear cache
+            CacheHelper::clearUserCache($permohonan->user_id);
+            $cacheKeys = [
+                "dashboard_user_{$permohonan->user_id}",
+                "riwayat_user_{$permohonan->user_id}",
+                "notifikasi_user_{$permohonan->user_id}",
+            ];
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            
+            Log::info("Draft SK berhasil dihapus untuk permohonan {$permohonan->id}");
+            
+            return back()->with('success', 'Draft Surat Kerja berhasil dihapus.');
+            
         } catch (\Exception $e) {
-            Log::error('Error uploading SK: ' . $e->getMessage());
+            Log::error('Error deleting draft SK: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return back()->withErrors([
-                'error' => 'Terjadi kesalahan saat mengunggah Surat Kerja. Silakan coba lagi.'
-            ])->withInput();
+                'error' => 'Terjadi kesalahan saat menghapus draft Surat Kerja. Silakan coba lagi atau hubungi administrator.'
+            ]);
         }
     }
 }

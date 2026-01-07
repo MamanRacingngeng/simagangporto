@@ -430,28 +430,129 @@
             </div>
           </div>
           
-          <!-- Surat Kerja (SK) Download Section -->
-          @if(!empty($permohonan->surat_kerja))
-            <div class="info-card" style="background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border: 2px solid #10B981;">
-              <div class="info-card-header">
-                <h2 class="info-card-title">📄 Surat Kerja (SK)</h2>
-              </div>
-              
-              <div style="padding: 20px; background: #FFFFFF; border-radius: 12px; border: 1px solid #A7F3D0;">
-                <p style="margin: 0 0 16px 0; font-size: 14px; color: #374151; line-height: 1.6;">
-                  Surat Kerja dari instansi telah tersedia. Email notifikasi juga telah dikirim ke <strong>{{ $user->email }}</strong>. Silakan unduh file berikut untuk keperluan administrasi Anda.
-                </p>
-                <a href="{{ route('download.sk') }}" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Download Surat Kerja (SK)
-                </a>
-              </div>
+          <!-- Surat Kerja (SK) Section - SELALU TAMPILKAN -->
+          <div class="info-card" style="@if(!empty($permohonan->surat_kerja)) background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border: 2px solid #10B981; @else background: #FEF3C7; border: 2px solid #F59E0B; @endif">
+            <div class="info-card-header">
+              <h2 class="info-card-title">📄 Surat Kerja (SK)</h2>
             </div>
-          @endif
+            
+            @php
+              // Cek apakah SK ada di database (draft) atau di storage (sudah dikirim)
+              $suratKerjaValue = $permohonan->surat_kerja ?? null;
+              $hasSK = false;
+              $skPath = null;
+              $skExists = false;
+              
+              // Cek dulu apakah ada di database (draft)
+              if (!empty($suratKerjaValue) && trim($suratKerjaValue) !== '') {
+                // SK masih draft (ada di database)
+                $cleanPath = ltrim($suratKerjaValue, '/');
+                $skExists = \Storage::disk('public')->exists($cleanPath);
+                if ($skExists) {
+                  $skPath = asset('storage/' . $cleanPath);
+                  $hasSK = true;
+                }
+              }
+              
+              // Jika tidak ada di database, cari file di storage berdasarkan pattern (sudah dikirim)
+              // PENTING: Validasi ketat untuk memastikan file benar-benar milik permohonan ini
+              if (!$hasSK) {
+                $storagePath = storage_path('app/public/surat_kerja');
+                if (is_dir($storagePath)) {
+                  $pattern = $storagePath . '/sk_' . $permohonan->id . '_*.pdf';
+                  $files = glob($pattern);
+                  if (!empty($files)) {
+                    // Validasi: pastikan file benar-benar mengandung ID permohonan yang benar
+                    $validFiles = array_filter($files, function($file) use ($permohonan) {
+                      $filename = basename($file);
+                      // Pattern: sk_{permohonan_id}_{timestamp}.pdf
+                      return preg_match('/^sk_' . preg_quote($permohonan->id, '/') . '_\d+\.pdf$/', $filename);
+                    });
+                    
+                    if (!empty($validFiles)) {
+                      // Ambil file terbaru berdasarkan timestamp
+                      usort($validFiles, function($a, $b) {
+                        return filemtime($b) - filemtime($a);
+                      });
+                      $latestFile = basename($validFiles[0]);
+                      $filePath = 'surat_kerja/' . $latestFile;
+                      if (\Storage::disk('public')->exists($filePath)) {
+                        // Validasi final: pastikan file path mengandung ID permohonan yang benar
+                        if (strpos($filePath, 'sk_' . $permohonan->id . '_') !== false) {
+                          $skExists = true;
+                          $skPath = asset('storage/' . $filePath);
+                          $hasSK = true;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            @endphp
+            
+            @if($hasSK && $skExists && $skPath)
+              <!-- SK Tersedia -->
+              <div style="padding: 20px; background: #FFFFFF; border-radius: 12px; border: 1px solid #A7F3D0;">
+                <p style="margin: 0 0 20px 0; font-size: 14px; color: #374151; line-height: 1.6;">
+                  Surat Kerja dari instansi telah tersedia. Email notifikasi juga telah dikirim ke <strong>{{ $user->email }}</strong>. Anda dapat melihat atau mengunduh file berikut untuk keperluan administrasi Anda.
+                </p>
+                
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <!-- Tombol Lihat SK -->
+                  <a href="{{ $skPath ?? asset('storage/' . ltrim($suratKerjaValue, '/')) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #FFFFFF; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Lihat Surat Kerja
+                  </a>
+                  
+                  <!-- Tombol Download SK -->
+                  <a href="{{ route('download.sk') }}" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Download Surat Kerja
+                  </a>
+                </div>
+                
+                <!-- Info tambahan -->
+                <div style="margin-top: 16px; padding: 12px; background: #F0FDF4; border-radius: 8px; border-left: 3px solid #10B981;">
+                  <p style="margin: 0; font-size: 13px; color: #065F46; line-height: 1.5;">
+                    <strong>💡 Tips:</strong> Klik "Lihat Surat Kerja" untuk membuka file di tab baru, atau klik "Download Surat Kerja" untuk menyimpan file ke perangkat Anda.
+                  </p>
+                </div>
+              </div>
+            @else
+              <!-- SK Belum Tersedia -->
+              <div style="padding: 20px; background: #FFFFFF; border-radius: 12px;">
+                <div style="display: flex; align-items: flex-start; gap: 16px;">
+                  <div style="flex-shrink: 0;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #F59E0B;">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="flex: 1;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #92400E;">
+                      Surat Kerja Belum Tersedia
+                    </h3>
+                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #92400E; line-height: 1.6;">
+                      Surat Kerja dari instansi sedang diproses oleh admin. File akan muncul di sini secara otomatis setelah admin mengirimkan Surat Kerja untuk permohonan Anda. Anda juga akan menerima notifikasi melalui email ketika Surat Kerja sudah tersedia.
+                    </p>
+                    <div style="padding: 12px; background: #FEF3C7; border-radius: 8px; border-left: 3px solid #F59E0B;">
+                      <p style="margin: 0; font-size: 13px; color: #92400E; line-height: 1.5;">
+                        <strong>⏰ Waktu Proses:</strong> Surat Kerja biasanya tersedia dalam maksimal <strong>2x24 jam (48 jam)</strong> setelah status permohonan Anda menjadi "Diterima". Jika melebihi waktu tersebut, silakan hubungi admin untuk informasi lebih lanjut.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            @endif
+          </div>
           
           <!-- Informasi Tambahan -->
           <div class="info-card">

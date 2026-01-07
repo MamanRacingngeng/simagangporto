@@ -548,8 +548,6 @@
                 <div class="info-label">Status</div>
                 <div>
                     @php
-                    @endphp
-                    @php
                         $statusClass = strtolower(optional($permohonan)->status ?? 'default');
                     @endphp
                     <span class="status-badge {{ $statusClass }}">
@@ -557,6 +555,82 @@
                     </span>
                 </div>
             </div>
+            @if($permohonan->status === 'Diterima')
+                <div class="info-card" style="grid-column: 1 / -1;">
+                    <div class="info-label">Status Surat Kerja (SK)</div>
+                    <div>
+                        @php
+                            // Cek Status SK
+                            $skStatus = 'belum_ada';
+                            $skStatusText = 'Belum Ada SK';
+                            $skStatusClass = 'warning';
+                            $skStatusIcon = 'clock';
+                            
+                            // Cek apakah ada di database (draft)
+                            if (!empty($permohonan->surat_kerja)) {
+                                $skStatus = 'draft';
+                                $skStatusText = 'Draft (Belum Dikirim ke Peserta)';
+                                $skStatusClass = 'warning';
+                                $skStatusIcon = 'edit';
+                            } else {
+                                // Cek apakah ada di storage (sudah dikirim)
+                                $storagePath = storage_path('app/public/surat_kerja');
+                                if (is_dir($storagePath)) {
+                                    $files = glob($storagePath . '/sk_' . $permohonan->id . '_*.pdf');
+                                    if (!empty($files)) {
+                                        // Validasi: pastikan file benar-benar mengandung ID permohonan yang benar
+                                        $validFiles = array_filter($files, function($file) use ($permohonan) {
+                                            $filename = basename($file);
+                                            return preg_match('/^sk_' . preg_quote($permohonan->id, '/') . '_\d+\.pdf$/', $filename);
+                                        });
+                                        
+                                        if (!empty($validFiles)) {
+                                            $skStatus = 'sudah_dikirim';
+                                            $skStatusText = 'Sudah Dikirim ke Peserta';
+                                            $skStatusClass = 'success';
+                                            $skStatusIcon = 'check';
+                                        }
+                                    }
+                                }
+                            }
+                        @endphp
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: @if($skStatus === 'sudah_dikirim') #ECFDF5 @elseif($skStatus === 'draft') #FEF3C7 @else #F3F4F6 @endif; border-radius: 12px; border: 2px solid @if($skStatus === 'sudah_dikirim') #10B981 @elseif($skStatus === 'draft') #F59E0B @else #E5E7EB @endif;">
+                            <div style="flex-shrink: 0;">
+                                @if($skStatus === 'sudah_dikirim')
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #10B981;">
+                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                @elseif($skStatus === 'draft')
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #F59E0B;">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                @else
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #6B7280;">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                        <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                @endif
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 16px; font-weight: 700; color: @if($skStatus === 'sudah_dikirim') #065F46 @elseif($skStatus === 'draft') #92400E @else #374151 @endif; margin-bottom: 4px;">
+                                    {{ $skStatusText }}
+                                </div>
+                                <div style="font-size: 13px; color: @if($skStatus === 'sudah_dikirim') #047857 @elseif($skStatus === 'draft') #B45309 @else #6B7280 @endif;">
+                                    @if($skStatus === 'sudah_dikirim')
+                                        ✅ Surat Kerja telah dikirim ke email peserta dan tersedia untuk diunduh di dashboard mereka.
+                                    @elseif($skStatus === 'draft')
+                                        ⏳ Surat Kerja masih dalam status draft. Klik tombol "Kirim Surat Kerja" untuk mengirim ke peserta.
+                                    @else
+                                        ⚠️ Surat Kerja belum tersedia. Silakan upload dan kirim Surat Kerja untuk peserta ini.
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -772,52 +846,77 @@
                 </div>
                 
                 @if($permohonan->surat_kerja)
-                    <div style="padding: 16px; background: #ECFDF5; border-radius: 8px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #10B981;">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Draft SK - Belum Dikirim -->
+                    <div style="padding: 16px; background: #FEF3C7; border-radius: 8px; margin-bottom: 16px; border: 1px solid #F59E0B;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #F59E0B;">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                    <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                                 <div>
-                                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #065F46;">
-                                        Surat Kerja sudah diunggah
+                                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #92400E;">
+                                        Surat Kerja (Draft) - Belum Dikirim
                                     </p>
-                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #047857;">
+                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #B45309;">
                                         {{ basename($permohonan->surat_kerja) }}
                                     </p>
                                 </div>
                             </div>
-                            <a href="{{ asset('storage/' . $permohonan->surat_kerja) }}" target="_blank" style="padding: 8px 16px; background: #10B981; color: #FFFFFF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Lihat File
-                            </a>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <a href="{{ asset('storage/' . $permohonan->surat_kerja) }}" target="_blank" style="padding: 8px 16px; background: #F59E0B; color: #FFFFFF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;" onmouseover="this.style.background='#D97706'" onmouseout="this.style.background='#F59E0B'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Lihat SK
+                                </a>
+                                <form action="{{ route('admin.hapus_draft_sk', $permohonan->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus draft Surat Kerja ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" style="padding: 8px 16px; background: #EF4444; color: #FFFFFF; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;" onmouseover="this.style.background='#DC2626'" onmouseout="this.style.background='#EF4444'">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Hapus
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 @endif
                 
-                <form action="{{ route('admin.upload_sk', $permohonan->id) }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151;">
-                            Pilih File Surat Kerja (PDF) <span style="color: #EF4444;">*</span>
-                        </label>
-                        <input type="file" name="surat_kerja" accept=".pdf" required style="width: 100%; padding: 12px; border: 2px dashed #D1D5DB; border-radius: 8px; background: #F9FAFB; font-size: 14px; cursor: pointer; transition: all 0.2s ease;" onchange="this.style.borderColor='#10B981'; this.style.background='#ECFDF5';">
-                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #6B7280;">
-                            Format file: PDF. Maksimal ukuran: 5MB. File akan dikirim ke email peserta secara otomatis.
-                        </p>
+                @if($permohonan->surat_kerja)
+                    <!-- Jika sudah ada draft, hanya tampilkan tombol Kirim -->
+                    <div style="margin-top: 16px;">
+                        <form action="{{ route('admin.kirim_sk', $permohonan->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); width: 100%;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Kirim Surat Kerja
+                            </button>
+                        </form>
                     </div>
-                    <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                        @if($permohonan->surat_kerja)
-                            Ganti Surat Kerja
-                        @else
-                            Upload Surat Kerja
-                        @endif
-                    </button>
-                </form>
+                @else
+                    <!-- Jika belum ada draft, tampilkan form upload -->
+                    <form action="{{ route('admin.upload_sk', $permohonan->id) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151;">
+                                Pilih File Surat Kerja (PDF) <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="file" name="surat_kerja" accept=".pdf" required style="width: 100%; padding: 12px; border: 2px dashed #D1D5DB; border-radius: 8px; background: #F9FAFB; font-size: 14px; cursor: pointer; transition: all 0.2s ease;" onchange="this.style.borderColor='#10B981'; this.style.background='#ECFDF5';">
+                            <p style="margin: 8px 0 0 0; font-size: 12px; color: #6B7280;">
+                                Format file: PDF. Maksimal ukuran: 5MB. Upload file terlebih dahulu, lalu klik "Kirim Surat Kerja" untuk mengirim ke peserta.
+                            </p>
+                        </div>
+                        <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #FFFFFF; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); width: 100%;">
+                            Upload Draft
+                        </button>
+                    </form>
+                @endif
             </div>
         @endif
     @endif

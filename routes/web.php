@@ -182,6 +182,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Upload Surat Kerja (SK) untuk peserta yang diterima
     Route::post('/upload-sk/{id}', [AdminController::class, 'uploadSK'])->name('upload_sk');
+    // Kirim Surat Kerja (SK) ke peserta
+    Route::post('/kirim-sk/{id}', [AdminController::class, 'kirimSK'])->name('kirim_sk');
+    // Hapus Draft Surat Kerja (SK)
+    Route::delete('/hapus-draft-sk/{id}', [AdminController::class, 'hapusDraftSK'])->name('hapus_draft_sk');
     
     // Pengawasan Sumber Daya
     Route::get('/pengawasan-sumber-daya', [AdminController::class, 'pengawasanSumberDaya'])->name('pengawasan_sumber_daya');

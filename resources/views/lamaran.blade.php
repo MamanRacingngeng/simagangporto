@@ -928,43 +928,17 @@
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <h3 class="empty-title">
-                  @php
-                    $allPermohonan = \App\Models\PermohonanMagang::where('user_id', auth()->id())
-                      ->whereIn('status', ['Diterima', 'Ditolak'])
-                      ->orderBy('created_at', 'desc')
-                      ->first();
-                  @endphp
-                  @if($allPermohonan)
-                    Permohonan Sudah Final
-                  @else
-                    Belum Ada Permohonan Aktif
-                  @endif
-                </h3>
+                <h3 class="empty-title">Belum Ada Permohonan Aktif</h3>
                 <p class="empty-desc">
-                  @if($allPermohonan)
-                    Permohonan Anda sudah selesai ({{ $allPermohonan->status }}). Lihat detail lengkap dan riwayat semua permohonan di menu <strong>Status Lamaran</strong>.
-                  @else
-                    Anda belum mengajukan permohonan magang. Lengkapi dokumen terlebih dahulu, kemudian ajukan permohonan di halaman Lowongan.
-                  @endif
+                  Anda belum mengajukan permohonan magang. Lengkapi dokumen terlebih dahulu, kemudian ajukan permohonan di halaman Lowongan.
                 </p>
                 <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                  @if($allPermohonan)
-                    <a href="{{ route('riwayat.lamaran') }}" class="btn-primary">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      Lihat Riwayat Lamaran
-                    </a>
-                  @else
-                    <a href="{{ route('lowongan') }}" class="btn-primary">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      Lihat Lowongan
-                    </a>
-                  @endif
+                  <a href="{{ route('lowongan') }}" class="btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Lihat Lowongan
+                  </a>
                 </div>
               </div>
             @endif

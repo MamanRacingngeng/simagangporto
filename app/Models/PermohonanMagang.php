@@ -18,6 +18,7 @@ class PermohonanMagang extends Model
         'status', // Sesuai ERD: "Diajukan", "Diverifikasi", "Diterima", atau "Ditolak"
         'alasan_penolakan', // Alasan penolakan jika status = "Ditolak"
         'catatan_revisi', // Catatan revisi saat admin meminta perbaikan (nullable)
+        'surat_kerja', // Path file Surat Kerja yang diupload admin
         'periode_backup', // Backup periode untuk riwayat meskipun kuota sudah dihapus
         'posisi_backup', // Backup posisi untuk riwayat meskipun kuota sudah dihapus
         'tgl_mulai_backup', // Backup tanggal mulai untuk riwayat meskipun jadwal sudah dihapus

@@ -396,6 +396,7 @@
                     <th>Tanggal Pengajuan</th>
                     <th>Status Dokumen</th>
                     <th>Status</th>
+                    <th>Status SK</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -405,6 +406,43 @@
                         $hasCV = $p->dokumen && !empty($p->dokumen->cv);
                         $hasSurat = $p->dokumen && !empty($p->dokumen->surat_pengantar);
                         $hasProposal = $p->dokumen && !empty($p->dokumen->proposal);
+                        
+                        // Cek Status SK
+                        $skStatus = 'belum_ada';
+                        $skStatusText = 'Belum Ada SK';
+                        $skStatusClass = 'warning';
+                        
+                        if ($p->status === 'Diterima') {
+                            // Cek apakah ada di database (draft)
+                            if (!empty($p->surat_kerja)) {
+                                $skStatus = 'draft';
+                                $skStatusText = 'Draft (Belum Dikirim)';
+                                $skStatusClass = 'warning';
+                            } else {
+                                // Cek apakah ada di storage (sudah dikirim)
+                                $storagePath = storage_path('app/public/surat_kerja');
+                                if (is_dir($storagePath)) {
+                                    $files = glob($storagePath . '/sk_' . $p->id . '_*.pdf');
+                                    if (!empty($files)) {
+                                        // Validasi: pastikan file benar-benar mengandung ID permohonan yang benar
+                                        $validFiles = array_filter($files, function($file) use ($p) {
+                                            $filename = basename($file);
+                                            return preg_match('/^sk_' . preg_quote($p->id, '/') . '_\d+\.pdf$/', $filename);
+                                        });
+                                        
+                                        if (!empty($validFiles)) {
+                                            $skStatus = 'sudah_dikirim';
+                                            $skStatusText = 'Sudah Dikirim';
+                                            $skStatusClass = 'success';
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            $skStatus = 'tidak_berlaku';
+                            $skStatusText = '-';
+                            $skStatusClass = 'default';
+                        }
                     @endphp
                     <tr>
                         <td style="font-weight: 600; color: #111827;">{{ $p->user->nama ?? '-' }}</td>
@@ -475,6 +513,35 @@
                             <span class="status-badge {{ $statusClass }}">
                                 {{ $p->status }}
                             </span>
+                        </td>
+                        <td>
+                            @if($skStatus === 'tidak_berlaku')
+                                <span style="color: #9CA3AF; font-size: 13px;">-</span>
+                            @elseif($skStatus === 'sudah_dikirim')
+                                <span class="status-badge success" style="background: #ECFDF5; color: #10B981; border: 1px solid #10B981;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Sudah Dikirim
+                                </span>
+                            @elseif($skStatus === 'draft')
+                                <span class="status-badge warning" style="background: #FEF3C7; color: #F59E0B; border: 1px solid #F59E0B;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                        <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Draft
+                                </span>
+                            @else
+                                <span class="status-badge warning" style="background: #FEF3C7; color: #F59E0B; border: 1px solid #F59E0B;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    Belum Ada
+                                </span>
+                            @endif
                         </td>
                         <td>
                             <div class="action-buttons">

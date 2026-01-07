@@ -1308,18 +1308,102 @@
                   @endif
 
                   @if($permohonan->status === 'Diterima')
+                    <!-- Surat Kerja (SK) Section -->
+                    @php
+                      // Cek apakah SK ada di database (draft) atau di storage (sudah dikirim)
+                      $suratKerjaValue = $permohonan->surat_kerja ?? null;
+                      $hasSK = !empty($suratKerjaValue);
+                      $skPath = null;
+                      $skExists = false;
+                      
+                      if ($hasSK) {
+                        // SK masih draft (ada di database)
+                        $cleanPath = ltrim($suratKerjaValue, '/');
+                        $skExists = \Storage::disk('public')->exists($cleanPath);
+                        if ($skExists) {
+                          $skPath = asset('storage/' . $cleanPath);
+                        }
+                      } else {
+                        // SK sudah dikirim (tidak ada di database), cari file di storage berdasarkan pattern
+                        // PENTING: Validasi ketat untuk memastikan file benar-benar milik permohonan ini
+                        $storagePath = storage_path('app/public/surat_kerja');
+                        if (is_dir($storagePath)) {
+                          $pattern = $storagePath . '/sk_' . $permohonan->id . '_*.pdf';
+                          $files = glob($pattern);
+                          if (!empty($files)) {
+                            // Validasi: pastikan file benar-benar mengandung ID permohonan yang benar
+                            $validFiles = array_filter($files, function($file) use ($permohonan) {
+                              $filename = basename($file);
+                              // Pattern: sk_{permohonan_id}_{timestamp}.pdf
+                              return preg_match('/^sk_' . preg_quote($permohonan->id, '/') . '_\d+\.pdf$/', $filename);
+                            });
+                            
+                            if (!empty($validFiles)) {
+                              // Ambil file terbaru berdasarkan timestamp
+                              usort($validFiles, function($a, $b) {
+                                return filemtime($b) - filemtime($a);
+                              });
+                              $latestFile = basename($validFiles[0]);
+                              $filePath = 'surat_kerja/' . $latestFile;
+                              if (\Storage::disk('public')->exists($filePath)) {
+                                // Validasi final: pastikan file path mengandung ID permohonan yang benar
+                                if (strpos($filePath, 'sk_' . $permohonan->id . '_') !== false) {
+                                  $skExists = true;
+                                  $skPath = asset('storage/' . $filePath);
+                                  $hasSK = true;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    @endphp
+                    @if($hasSK && $skExists)
+                        <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border-radius: 12px; border: 2px solid #10B981;">
+                          <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #065F46; display: flex; align-items: center; gap: 8px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Surat Kerja (SK) Tersedia
+                          </h3>
+                          <p style="margin: 0 0 16px 0; font-size: 14px; color: #065F46; line-height: 1.6;">
+                            Surat Kerja dari instansi telah tersedia. Anda dapat melihat atau mengunduh file berikut.
+                          </p>
+                          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <a href="{{ $skPath }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #3B82F6; color: #FFFFFF; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.2s ease;" onmouseover="this.style.background='#2563EB'" onmouseout="this.style.background='#3B82F6'">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              </svg>
+                              Lihat SK
+                            </a>
+                            <a href="{{ route('download.sk') }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #10B981; color: #FFFFFF; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.2s ease;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10B981'">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              </svg>
+                              Download SK
+                            </a>
+                          </div>
+                        </div>
+                    @endif
+                    
                     <div style="margin-top: 20px; padding: 16px; background: #D1FAE5; border-radius: 8px; border-left: 4px solid #10B981;">
                       <p style="margin: 0; color: #065F46; font-weight: 500;">
                         🎉 Selamat! Permohonan Anda diterima. Informasi lebih lanjut akan disampaikan melalui email atau menu Laporan Mingguan.
                       </p>
                     </div>
-                  @elseif($permohonan->status === 'Diverifikasi')
+                  @endif
+                  
+                  @if($permohonan->status === 'Diverifikasi')
                     <div style="margin-top: 20px; padding: 16px; background: #FEF3C7; border-radius: 8px; border-left: 4px solid #F59E0B;">
                       <p style="margin: 0; color: #92400E; font-weight: 500;">
                         Permohonan Anda sedang dalam proses verifikasi. Mohon tunggu informasi selanjutnya.
                       </p>
                     </div>
-                  @else
+                  @elseif(!in_array($permohonan->status, ['Diterima', 'Diverifikasi']))
                     <div style="margin-top: 20px; padding: 16px; background: #EFF6FF; border-radius: 8px; border-left: 4px solid #2563EB;">
                       <p style="margin: 0; color: #1E40AF; font-weight: 500;">
                         Permohonan Anda telah diajukan dan sedang menunggu verifikasi dari admin.

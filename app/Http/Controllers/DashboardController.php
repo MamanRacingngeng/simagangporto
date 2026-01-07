@@ -148,6 +148,38 @@ class DashboardController extends Controller
             ->limit(10) // Batasi jumlah notifikasi
             ->get(['id', 'user_id', 'judul', 'pesan', 'tipe', 'dibaca', 'created_at', 'permohonan_magang_id']);
         
+        // Filter notifikasi revisi: hanya tampilkan jika status permohonan masih "Revisi"
+        // Optimasi: Ambil semua permohonan revisi dalam satu query untuk menghindari N+1
+        $notifikasiRevisi = $notifikasi->where('tipe', 'revisi');
+        if ($notifikasiRevisi->isNotEmpty()) {
+            $permohonanRevisiIds = $notifikasiRevisi->pluck('permohonan_magang_id')->filter()->unique();
+            
+            // Ambil semua permohonan yang masih berstatus "Revisi" dalam satu query
+            $permohonanMasihRevisi = PermohonanMagang::where('user_id', $user->id)
+                ->where('status', 'Revisi')
+                ->when($permohonanRevisiIds->isNotEmpty(), function($query) use ($permohonanRevisiIds) {
+                    $query->whereIn('id', $permohonanRevisiIds);
+                })
+                ->pluck('id')
+                ->toArray();
+            
+            // Filter notifikasi revisi: hanya tampilkan jika permohonan masih berstatus "Revisi"
+            $notifikasi = $notifikasi->filter(function ($notif) use ($permohonanMasihRevisi, $user) {
+                // Jika bukan notifikasi revisi, tampilkan seperti biasa
+                if ($notif->tipe !== 'revisi') {
+                    return true;
+                }
+                
+                // Untuk notifikasi revisi dengan permohonan_magang_id, cek apakah masih "Revisi"
+                if ($notif->permohonan_magang_id) {
+                    return in_array($notif->permohonan_magang_id, $permohonanMasihRevisi);
+                }
+                
+                // Jika tidak ada permohonan_magang_id, cek apakah ada permohonan dengan status Revisi
+                return !empty($permohonanMasihRevisi);
+            });
+        }
+        
         // Log untuk debugging - selalu log untuk troubleshooting
         $totalNotifikasi = Notifikasi::where('user_id', $user->id)->count();
         $totalBelumDibaca = Notifikasi::where('user_id', $user->id)->where('dibaca', false)->count();
@@ -343,12 +375,19 @@ class DashboardController extends Controller
             try {
                 // OPTIMASI Maksimal: Load semua relasi yang diperlukan dengan eager loading
                 // Pastikan kuotaMagang di-load untuk menghindari N+1 di view
+                // Cek apakah kolom surat_kerja ada di database
+                $hasSuratKerjaColumn = DB::getSchemaBuilder()->hasColumn('permohonan_magang', 'surat_kerja');
+                $selectFields = ['id', 'user_id', 'dokumen_id', 'status', 'alasan_penolakan', 'catatan_revisi', 'created_at', 'updated_at', 'tanggal_pengajuan'];
+                if ($hasSuratKerjaColumn) {
+                    $selectFields[] = 'surat_kerja';
+                }
+                
                 $allPermohonan = PermohonanMagang::where('user_id', $user->id)
                     ->with([
                         'dokumen:id,user_id,cv,surat_pengantar,proposal,tanggal_upload',
                         'kuotaMagang:id,periode,posisi' // Load kuotaMagang saja, jadwal akan di-load terpisah jika perlu
                     ])
-                    ->select('id', 'user_id', 'dokumen_id', 'status', 'alasan_penolakan', 'catatan_revisi', 'created_at', 'updated_at', 'tanggal_pengajuan')
+                    ->select($selectFields)
                     ->orderBy('created_at', 'desc')
                     ->limit(20)
                     ->get();
@@ -557,7 +596,7 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         
-        // Ambil permohonan aktif yang diterima
+        // Ambil permohonan aktif yang diterima - pastikan field surat_kerja di-load
         $permohonan = PermohonanMagang::where('user_id', $user->id)
             ->where('status', 'Diterima')
             ->with(['kuotaMagang', 'dokumen'])
@@ -567,6 +606,19 @@ class DashboardController extends Controller
         if (!$permohonan) {
             return redirect()->route('riwayat.lamaran')->withErrors([
                 'error' => 'Anda belum memiliki permohonan yang diterima. Panduan onboarding hanya tersedia untuk peserta yang telah diterima.'
+            ]);
+        }
+        
+        // Refresh untuk memastikan data terbaru (termasuk surat_kerja jika baru diupload)
+        $permohonan->refresh();
+        
+        // Debug: Log untuk memastikan surat_kerja ter-load (hapus di production jika tidak perlu)
+        if (config('app.debug')) {
+            Log::info('Panduan Onboarding - SK Check', [
+                'permohonan_id' => $permohonan->id,
+                'surat_kerja' => $permohonan->surat_kerja,
+                'surat_kerja_exists' => !empty($permohonan->surat_kerja),
+                'file_exists' => $permohonan->surat_kerja ? Storage::disk('public')->exists($permohonan->surat_kerja) : false,
             ]);
         }
         
@@ -620,21 +672,63 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Cek apakah Surat Kerja sudah diunggah oleh admin
-        if (empty($permohonan->surat_kerja)) {
-            return back()->withErrors(['error' => 'Surat Kerja belum tersedia. Silakan hubungi admin untuk informasi lebih lanjut.']);
+        // Cek apakah Surat Kerja ada di database (jika masih draft)
+        $filePath = null;
+        if (!empty($permohonan->surat_kerja)) {
+            // Validasi: pastikan file path mengandung ID permohonan yang benar
+            $cleanPath = ltrim($permohonan->surat_kerja, '/');
+            if (strpos($cleanPath, 'sk_' . $permohonan->id . '_') !== false) {
+                $filePath = $cleanPath;
+            }
+        } else {
+            // Jika sudah dikirim (surat_kerja = null), cari file berdasarkan pattern
+            // Pattern: sk_{permohonan_id}_*.pdf - PASTIKAN ID sesuai dengan permohonan user
+            $storagePath = storage_path('app/public/surat_kerja');
+            if (is_dir($storagePath)) {
+                $pattern = $storagePath . '/sk_' . $permohonan->id . '_*.pdf';
+                $files = glob($pattern);
+                if (!empty($files)) {
+                    // Validasi: pastikan file benar-benar mengandung ID permohonan yang benar
+                    $validFiles = array_filter($files, function($file) use ($permohonan) {
+                        $filename = basename($file);
+                        return preg_match('/^sk_' . preg_quote($permohonan->id, '/') . '_\d+\.pdf$/', $filename);
+                    });
+                    
+                    if (!empty($validFiles)) {
+                        // Ambil file terbaru berdasarkan timestamp
+                        usort($validFiles, function($a, $b) {
+                            return filemtime($b) - filemtime($a);
+                        });
+                        $filePath = 'surat_kerja/' . basename($validFiles[0]);
+                    }
+                }
+            }
+        }
+
+        if (empty($filePath)) {
+            return back()->withErrors(['error' => 'Surat Kerja belum tersedia. Admin belum mengirim Surat Kerja untuk permohonan Anda. Harap menunggu maksimal 2x24 jam atau hubungi admin untuk informasi lebih lanjut.']);
         }
 
         // Cek apakah file ada di storage
-        $filePath = storage_path('app/public/' . $permohonan->surat_kerja);
-        if (!file_exists($filePath)) {
+        $fullPath = storage_path('app/public/' . $filePath);
+        if (!file_exists($fullPath)) {
             return back()->withErrors(['error' => 'File Surat Kerja tidak ditemukan. Silakan hubungi admin.']);
+        }
+
+        // Validasi final: pastikan file path mengandung ID permohonan yang benar
+        if (strpos($filePath, 'sk_' . $permohonan->id . '_') === false) {
+            Log::warning('SK download attempt with invalid file path', [
+                'user_id' => $user->id,
+                'permohonan_id' => $permohonan->id,
+                'file_path' => $filePath,
+            ]);
+            return back()->withErrors(['error' => 'Surat Kerja tidak valid. Silakan hubungi admin.']);
         }
 
         // Download file
         $fileName = 'Surat_Kerja_' . str_replace(' ', '_', $user->nama) . '_' . date('Y-m-d') . '.pdf';
         
-        return response()->download($filePath, $fileName);
+        return response()->download($fullPath, $fileName);
     }
 
     public function profil()
