@@ -3,8 +3,6 @@
     "version": 2,
     "framework": null,
     "installCommand": "sh scripts/vercel-install.sh",
-    "buildCommand": "",
-    "outputDirectory": "",
     "builds": [
         {
             "src": "/api/index.php",
@@ -56,7 +54,6 @@
         "VIEW_COMPILED_PATH": "/tmp",
         "CACHE_STORE": "array",
         "LOG_CHANNEL": "stderr",
-        "SESSION_DRIVER": "cookie",
-        "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+        "SESSION_DRIVER": "cookie"
     }
 }
