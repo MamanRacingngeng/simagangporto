@@ -609,14 +609,14 @@
                     @if($tglMulai)
                       <div class="info-item">
                         <span class="info-label">Tanggal Mulai</span>
-                        <span class="info-value">{{ \Carbon\Carbon::parse($tglMulai)->format('d F Y') }}</span>
+                        <span class="info-value">{{ $tglMulai->format('d F Y') }}</span>
                       </div>
                     @endif
                     
                     @if($tglSelesai)
                       <div class="info-item">
                         <span class="info-label">Tanggal Selesai</span>
-                        <span class="info-value">{{ \Carbon\Carbon::parse($tglSelesai)->format('d F Y') }}</span>
+                        <span class="info-value">{{ $tglSelesai->format('d F Y') }}</span>
                       </div>
                     @endif
                   @endif
