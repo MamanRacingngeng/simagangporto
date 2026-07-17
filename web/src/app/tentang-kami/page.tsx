@@ -18,7 +18,7 @@ export default function TentangKamiPage() {
           <div className="relative mx-auto w-full max-w-6xl px-6 text-center">
             <div className="mb-8 flex justify-center">
               <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
-                <img src="/images/profilebbkb.svg" alt="Logo BBKB" width={100} height={100} className="h-full w-full object-contain" />
+                <img src="/images/profilebbkb.png" alt="Logo BBKB" width={100} height={100} className="h-full w-full object-contain" />
               </div>
             </div>
             <h1 className="mb-4 text-2xl font-bold drop-shadow-lg md:text-3xl lg:text-4xl">Tentang Kami</h1>
@@ -44,7 +44,7 @@ export default function TentangKamiPage() {
             <div className="flex justify-center">
               <div className="w-full max-w-md rounded-2xl bg-gray-50 p-8 shadow-lg">
                 <div className="flex flex-col items-center text-center">
-                  <img src="/images/profilebbkb.svg" alt="BBKB" width={96} height={96} className="mb-6 object-contain" />
+                  <img src="/images/profilebbkb.png" alt="BBKB" width={96} height={96} className="mb-6 object-contain" />
                   <h3 className="text-lg font-bold text-gray-800">Balai Besar Kerajinan Dan Batik Yogyakarta</h3>
                   <p className="mt-2 text-sm text-gray-600">Kementerian Perindustrian</p>
                 </div>
