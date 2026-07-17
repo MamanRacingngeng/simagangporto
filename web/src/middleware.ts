@@ -1,10 +1,12 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth;
-  const role = req.auth?.user?.role;
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+
+  const isLoggedIn = !!token;
+  const role = token?.role as "user" | "admin" | undefined;
 
   const isAdminRoute =
     pathname.startsWith("/admin") && pathname !== "/admin/login";
@@ -48,7 +50,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
