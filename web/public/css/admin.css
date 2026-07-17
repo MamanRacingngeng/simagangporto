@@ -83,16 +83,10 @@
 @media (max-width: 768px) {
   .admin-main {
     margin-left: 0;
-    padding: 24px 16px;
+    padding: 16px 12px;
   }
 
-  .admin-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-  }
-
-  .admin-wrapper {
-    flex-direction: column;
+  .admin-card {
+    padding: 16px;
   }
 }

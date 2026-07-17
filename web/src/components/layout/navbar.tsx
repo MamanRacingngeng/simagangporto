@@ -1,41 +1,103 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { demoUser } from "@/lib/demo-data";
 import { NavbarLogos } from "./navbar-logos";
 
+const navLinks = [
+  { href: "/#beranda", label: "Beranda" },
+  { href: "/tentang-kami", label: "Tentang Kami" },
+  { href: "/#alur", label: "Alur" },
+  { href: "/#lowongan", label: "Lowongan" },
+  { href: "/galeri-magang", label: "Galeri Magang" },
+];
+
 export function Navbar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
-      <div
-        className="mx-auto flex max-w-7xl items-center justify-between py-4"
-        style={{ paddingLeft: 16, paddingRight: 24 }}
-      >
-        <Link href="/" className="flex items-center gap-2">
+    <nav className="site-navbar sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+      <div className="site-navbar-inner mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <Link href="/" className="min-w-0 shrink" onClick={() => setOpen(false)}>
           <NavbarLogos />
         </Link>
 
-        <ul className="hidden items-center gap-6 font-medium md:flex">
-          <li><Link href="/#beranda" className="nav-link text-gray-700">Beranda</Link></li>
-          <li><Link href="/tentang-kami" className="nav-link text-gray-700">Tentang Kami</Link></li>
-          <li><Link href="/#alur" className="nav-link text-gray-700">Alur</Link></li>
-          <li><Link href="/#lowongan" className="nav-link text-gray-700">Lowongan</Link></li>
-          <li><Link href="/galeri-magang" className="nav-link text-gray-700">Galeri Magang</Link></li>
+        <ul className="hidden items-center gap-5 font-medium lg:flex">
+          {navLinks.map(({ href, label }) => (
+            <li key={href}>
+              <Link href={href} className="nav-link text-gray-700">
+                {label}
+              </Link>
+            </li>
+          ))}
         </ul>
 
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 sm:flex">
           <Link
             href="/dashboard"
-            className="user-profile-btn hidden items-center gap-3 rounded-lg px-4 py-2 font-semibold shadow-sm sm:flex"
+            className="user-profile-btn flex items-center gap-2 rounded-lg px-3 py-2 font-semibold shadow-sm"
           >
-            <div className="user-profile-img relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-100 text-sm font-bold text-gray-700 shadow-sm">
+            <div className="user-profile-img relative z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-100 text-sm font-bold text-gray-700 shadow-sm">
               {demoUser.nama.charAt(0)}
             </div>
-            <div className="relative z-10 hidden flex-col items-start md:flex">
-              <span className="text-sm font-bold leading-tight text-gray-900">{demoUser.nama}</span>
-              <span className="text-xs font-medium leading-tight text-gray-600">Demo Portfolio</span>
-            </div>
+            <span className="relative z-10 hidden text-sm font-bold text-gray-900 xl:inline">
+              Demo
+            </span>
           </Link>
-          <Link href="/admin/dashboard" className="hidden rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 md:inline-block">
+          <Link
+            href="/admin/dashboard"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Admin
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="mobile-menu-btn lg:hidden"
+          aria-label={open ? "Tutup menu" : "Buka menu"}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className={`mobile-menu-icon ${open ? "open" : ""}`} />
+        </button>
+      </div>
+
+      <div className={`mobile-nav-overlay lg:hidden ${open ? "open" : ""}`} onClick={() => setOpen(false)} />
+
+      <div className={`mobile-nav-panel lg:hidden ${open ? "open" : ""}`}>
+        <ul className="mobile-nav-list">
+          {navLinks.map(({ href, label }) => (
+            <li key={href}>
+              <Link href={href} className="mobile-nav-link" onClick={() => setOpen(false)}>
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mobile-nav-actions">
+          <Link href="/dashboard" className="btn-gold mobile-nav-cta" onClick={() => setOpen(false)}>
+            Demo Dashboard
+          </Link>
+          <Link href="/admin/dashboard" className="mobile-nav-secondary" onClick={() => setOpen(false)}>
             Admin Demo
+          </Link>
+          <Link href="/login" className="mobile-nav-secondary" onClick={() => setOpen(false)}>
+            Login
           </Link>
         </div>
       </div>

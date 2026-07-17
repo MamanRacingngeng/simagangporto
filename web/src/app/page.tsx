@@ -30,23 +30,23 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/45 to-black/30 backdrop-blur-[0.5px]" />
           <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent via-white/20 to-white" />
 
-          <div className="relative z-10 mx-auto flex max-w-6xl flex-1 flex-col justify-center px-6 py-32 text-center">
-            <h1 className="animate-fade-in text-3xl font-bold leading-tight text-white drop-shadow-2xl md:text-4xl lg:text-5xl">
+          <div className="relative z-10 mx-auto flex max-w-6xl flex-1 flex-col justify-center px-4 py-24 text-center sm:px-6 sm:py-32">
+            <h1 className="animate-fade-in text-2xl font-bold leading-tight text-white drop-shadow-2xl sm:text-3xl md:text-4xl lg:text-5xl">
               Jelajahi Pengalaman Magang di Dunia Kerajinan & Batik
             </h1>
             <p className="mt-6 text-lg font-medium text-white opacity-95 drop-shadow-lg md:text-xl">
               Wujudkan potensi Anda bersama Balai Besar Kerajinan & Batik Yogyakarta.
             </p>
-            <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
               <Link
                 href="#lowongan"
-                className="transform rounded-xl bg-yellow-400 px-8 py-4 font-semibold text-gray-900 shadow-lg transition hover:scale-105 hover:bg-yellow-500 hover:shadow-xl"
+                className="transform rounded-xl bg-yellow-400 px-6 py-3 text-center text-sm font-semibold text-gray-900 shadow-lg transition hover:scale-105 hover:bg-yellow-500 sm:px-8 sm:py-4 sm:text-base"
               >
                 Lihat Lowongan Magang
               </Link>
               <Link
                 href="/dashboard"
-                className="transform rounded-xl border-2 border-white/50 bg-white/95 px-8 py-4 font-semibold text-gray-900 shadow-lg transition hover:scale-105 hover:border-white hover:bg-white"
+                className="transform rounded-xl border-2 border-white/50 bg-white/95 px-6 py-3 text-center text-sm font-semibold text-gray-900 shadow-lg transition hover:scale-105 hover:border-white hover:bg-white sm:px-8 sm:py-4 sm:text-base"
               >
                 Lihat Demo Sistem
               </Link>

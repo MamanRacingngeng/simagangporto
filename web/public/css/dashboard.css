@@ -407,39 +407,112 @@ aside.sidebar .nav .nav-item.active:hover,
 }
 
 /* ===== Responsive Design ===== */
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
 @media (max-width: 1024px) {
   .main {
-    padding: 30px;
+    padding: 24px 20px;
+  }
+
+  .admin-main h1,
+  .main h1 {
+    font-size: 24px !important;
   }
 }
 
 @media (max-width: 800px) {
-  .app-root {
+  .sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 90;
+  }
+
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-root,
+  .admin-wrapper {
     flex-direction: column;
   }
 
-  .sidebar {
-    position: relative;
+  .sidebar,
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(280px, 88vw);
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 20px 16px;
+  }
+
+  .sidebar.open,
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar .nav,
+  .admin-sidebar .nav {
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px;
   }
 
-  .nav {
-    flex-direction: row;
-    gap: 10px;
+  .sidebar .brand,
+  .admin-sidebar .brand {
+    margin-bottom: 12px;
   }
 
-  .main {
+  .main,
+  .admin-main {
     margin-left: 0;
-    padding: 20px;
+    padding: 16px;
+    width: 100%;
   }
 
   .actions {
     flex-direction: column;
+  }
+
+  .status-card {
+    padding: 20px;
+  }
+
+  .status-big {
+    font-size: 24px;
   }
 }
 
@@ -448,5 +521,10 @@ aside.sidebar .nav .nav-item.active:hover,
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .main,
+  .admin-main {
+    padding: 14px 12px;
   }
 }

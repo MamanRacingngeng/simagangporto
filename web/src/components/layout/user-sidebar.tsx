@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { DashboardStyles } from "./dashboard-styles";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "home" },
@@ -55,35 +57,32 @@ function NavIcon({ type }: { type: string }) {
   );
 }
 
-export function UserSidebar() {
+export function UserSidebar({
+  open,
+  onNavigate,
+}: {
+  open: boolean;
+  onNavigate: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="brand">
-        <div style={{ padding: "28px 20px" }}>
+        <div style={{ padding: "12px 8px 20px" }}>
           <div style={{ textAlign: "center" }}>
             <img
               src="/images/logoBBKB.png"
               alt="Logo BBKB"
               width={200}
               height={92}
-              style={{ height: 56, width: "auto", margin: "0 auto 14px", display: "block", objectFit: "contain" }}
+              style={{ height: 48, width: "auto", margin: "0 auto 12px", display: "block", objectFit: "contain" }}
             />
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#0C3A6B",
-                lineHeight: 1.3,
-                marginBottom: 4,
-              }}
-            >
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#0C3A6B", lineHeight: 1.3, marginBottom: 4 }}>
               Magang Digital
             </div>
-            <div style={{ fontSize: 13, color: "#6B7280", fontWeight: 500 }}>
-              Balai Besar Standardisasi dan Pelayanan Jasa Kerajinan dan Batik
-              Yogyakarta
+            <div style={{ fontSize: 12, color: "#6B7280", fontWeight: 500, lineHeight: 1.4 }}>
+              BBKB Yogyakarta
             </div>
           </div>
         </div>
@@ -95,6 +94,7 @@ export function UserSidebar() {
             key={href}
             href={href}
             className={`nav-item ${pathname === href ? "active" : ""}`}
+            onClick={onNavigate}
           >
             <span className="nav-icon" aria-hidden="true">
               <NavIcon type={icon} />
@@ -104,8 +104,13 @@ export function UserSidebar() {
         ))}
       </nav>
 
-      <div style={{ padding: "0 16px 20px" }}>
-        <Link href="/" className="btn-outline" style={{ width: "100%", display: "block", textAlign: "center" }}>
+      <div style={{ padding: "0 8px 12px" }}>
+        <Link
+          href="/"
+          className="btn-outline"
+          style={{ width: "100%", display: "block", textAlign: "center" }}
+          onClick={onNavigate}
+        >
           Kembali ke Beranda
         </Link>
       </div>
@@ -123,27 +128,47 @@ export function UserShell({
   subtitle?: string;
 }) {
   return (
-    <div className="main">
+    <>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: "#111827" }}>{title}</h1>
+        <h1 style={{ fontSize: "clamp(1.35rem, 4vw, 1.75rem)", fontWeight: 700, color: "#111827" }}>{title}</h1>
         {subtitle && (
           <p style={{ marginTop: 8, color: "#6B7280", fontSize: 15 }}>{subtitle}</p>
         )}
       </div>
       {children}
-    </div>
+    </>
   );
 }
 
-import { DashboardStyles } from "./dashboard-styles";
-
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   return (
     <div className="dashboard-page">
       <DashboardStyles />
+      <div
+        className={`sidebar-backdrop ${sidebarOpen ? "open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden={!sidebarOpen}
+      />
       <div className="app-root">
-        <UserSidebar />
-        {children}
+        <UserSidebar open={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
+        <div className="main">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label="Buka menu navigasi"
+            onClick={() => setSidebarOpen(true)}
+          >
+            ☰ Menu
+          </button>
+          {children}
+        </div>
       </div>
     </div>
   );
