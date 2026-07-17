@@ -3,14 +3,37 @@ import Image from "next/image";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { prisma } from "@/lib/prisma";
+import { tryQuery } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const fallbackJobs = [
+  {
+    title: "Magang Desain Batik",
+    description: "Pelajari teknik desain batik modern dan tradisional",
+    periode: "",
+  },
+  {
+    title: "Magang Pemasaran Digital",
+    description: "Kembangkan skill pemasaran digital untuk produk kerajinan",
+    periode: "",
+  },
+  {
+    title: "Magang Produksi Kerajinan",
+    description: "Terlibat langsung dalam proses produksi kerajinan",
+    periode: "",
+  },
+];
+
 export default async function HomePage() {
-  const kuota = await prisma.kuotaMagang.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
+  const kuota = await tryQuery(
+    () =>
+      prisma.kuotaMagang.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+    [],
+  );
 
   const sampleJobs =
     kuota.length > 0
@@ -19,23 +42,7 @@ export default async function HomePage() {
           description: item.deskripsi ?? "Magang di BBKB Yogyakarta.",
           periode: item.periode,
         }))
-      : [
-          {
-            title: "Magang Desain Batik",
-            description: "Pelajari teknik desain batik modern dan tradisional",
-            periode: "",
-          },
-          {
-            title: "Magang Pemasaran Digital",
-            description: "Kembangkan skill pemasaran digital untuk produk kerajinan",
-            periode: "",
-          },
-          {
-            title: "Magang Produksi Kerajinan",
-            description: "Terlibat langsung dalam proses produksi kerajinan",
-            periode: "",
-          },
-        ];
+      : fallbackJobs;
 
   return (
     <>

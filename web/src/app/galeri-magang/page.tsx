@@ -1,15 +1,20 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { prisma } from "@/lib/prisma";
+import { tryQuery } from "@/lib/db";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
 export default async function GaleriMagangPage() {
-  const galeri = await prisma.galeriMagang.findMany({
-    where: { aktif: true },
-    orderBy: { urutan: "asc" },
-  });
+  const galeri = await tryQuery(
+    () =>
+      prisma.galeriMagang.findMany({
+        where: { aktif: true },
+        orderBy: { urutan: "asc" },
+      }),
+    [],
+  );
 
   return (
     <>

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { getSessionSafe } from "@/lib/auth";
 import { NavbarLogos } from "./navbar-logos";
 
 export async function Navbar() {
-  const session = await auth();
+  const session = await getSessionSafe();
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">

@@ -127,22 +127,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
+export async function getSessionSafe() {
+  try {
+    return await auth();
+  } catch (error) {
+    console.error("[auth]", error);
+    return null;
+  }
+}
+
 export async function requireUser() {
-  const session = await auth();
+  const session = await getSessionSafe();
   if (!session?.user?.id) redirect("/login");
   if (session.user.role === "admin") redirect("/admin/dashboard");
   return session;
 }
 
 export async function requireAdmin() {
-  const session = await auth();
+  const session = await getSessionSafe();
   if (!session?.user?.id) redirect("/admin/login");
   if (session.user.role !== "admin") redirect("/dashboard");
   return session;
 }
 
 export async function redirectIfAuthenticated() {
-  const session = await auth();
+  const session = await getSessionSafe();
   if (!session?.user?.id) return;
   if (session.user.role === "admin") redirect("/admin/dashboard");
   redirect("/dashboard");
