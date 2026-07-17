@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -128,12 +129,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 export async function requireUser() {
   const session = await auth();
-  if (!session?.user?.id) return null;
+  if (!session?.user?.id) redirect("/login");
+  if (session.user.role === "admin") redirect("/admin/dashboard");
   return session;
 }
 
 export async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") return null;
+  if (!session?.user?.id) redirect("/admin/login");
+  if (session.user.role !== "admin") redirect("/dashboard");
   return session;
+}
+
+export async function redirectIfAuthenticated() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  if (session.user.role === "admin") redirect("/admin/dashboard");
+  redirect("/dashboard");
 }
