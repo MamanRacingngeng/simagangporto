@@ -2,53 +2,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { prisma } from "@/lib/prisma";
-import { tryQuery } from "@/lib/db";
+import { demoKuota } from "@/lib/demo-data";
 
-export const dynamic = "force-dynamic";
-
-const fallbackJobs = [
-  {
-    title: "Magang Desain Batik",
-    description: "Pelajari teknik desain batik modern dan tradisional",
-    periode: "",
-  },
-  {
-    title: "Magang Pemasaran Digital",
-    description: "Kembangkan skill pemasaran digital untuk produk kerajinan",
-    periode: "",
-  },
-  {
-    title: "Magang Produksi Kerajinan",
-    description: "Terlibat langsung dalam proses produksi kerajinan",
-    periode: "",
-  },
-];
-
-export default async function HomePage() {
-  const kuota = await tryQuery(
-    () =>
-      prisma.kuotaMagang.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      }),
-    [],
-  );
-
-  const sampleJobs =
-    kuota.length > 0
-      ? kuota.map((item) => ({
-          title: item.posisi,
-          description: item.deskripsi ?? "Magang di BBKB Yogyakarta.",
-          periode: item.periode,
-        }))
-      : fallbackJobs;
+export default function HomePage() {
+  const sampleJobs = demoKuota.map((item) => ({
+    title: item.posisi,
+    description: item.deskripsi ?? "Magang di BBKB Yogyakarta.",
+    periode: item.periode,
+  }));
 
   return (
     <>
       <Navbar />
       <main className="fade-in">
-        {/* hero.blade.php */}
         <section
           id="beranda"
           className="hero-batik relative flex w-full flex-col items-center justify-center text-white"
@@ -79,10 +45,10 @@ export default async function HomePage() {
                 Lihat Lowongan Magang
               </Link>
               <Link
-                href="#alur"
+                href="/dashboard"
                 className="transform rounded-xl border-2 border-white/50 bg-white/95 px-8 py-4 font-semibold text-gray-900 shadow-lg transition hover:scale-105 hover:border-white hover:bg-white"
               >
-                Pelajari Program
+                Lihat Demo Sistem
               </Link>
             </div>
           </div>
@@ -94,7 +60,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* steps.blade.php */}
         <section id="alur" className="relative -mt-24 rounded-t-3xl bg-gray-50 py-20 pt-32 shadow-lg">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="animate-fade-in mb-10 text-center text-3xl font-bold">Alur Pendaftaran</h2>
@@ -124,7 +89,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* jobs.blade.php */}
         <section id="lowongan" className="relative bg-white py-20">
           <div className="mx-auto max-w-6xl px-6">
             <div className="mb-8 flex flex-col items-center justify-between sm:flex-row">
@@ -139,7 +103,7 @@ export default async function HomePage() {
                   <h3 className="text-lg font-bold">{job.title}</h3>
                   <p className="mt-2 text-gray-600">{job.description}</p>
                   {job.periode && <p className="mt-2 text-sm text-gray-500">{job.periode}</p>}
-                  <Link href="/register" className="mt-4 inline-block text-blue-600 transition hover:text-blue-800">
+                  <Link href="/lowongan" className="mt-4 inline-block text-blue-600 transition hover:text-blue-800">
                     Selengkapnya →
                   </Link>
                 </div>
@@ -148,12 +112,11 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* gallery.blade.php */}
         <section id="galeri" className="relative bg-gray-50 py-20">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="mb-4 text-center text-3xl font-bold">Galeri Magang</h2>
             <p className="mx-auto mb-8 max-w-2xl text-center text-gray-600">
-              Lihat momen-momen berharga dari kegiatan magang di BBKB Yogyakarta. Dokumentasi pengalaman peserta magang dalam berbagai kegiatan dan proyek.
+              Lihat momen-momen berharga dari kegiatan magang di BBKB Yogyakarta.
             </p>
             <div className="mb-8 grid grid-cols-2 gap-6 md:grid-cols-4">
               {[

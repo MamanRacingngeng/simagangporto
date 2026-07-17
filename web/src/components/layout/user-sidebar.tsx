@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "home" },
@@ -116,14 +115,9 @@ export function UserSidebar() {
       </nav>
 
       <div style={{ padding: "0 16px 20px" }}>
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="btn-outline"
-          style={{ width: "100%" }}
-        >
-          Keluar
-        </button>
+        <Link href="/" className="btn-outline" style={{ width: "100%", display: "block", textAlign: "center" }}>
+          Kembali ke Beranda
+        </Link>
       </div>
     </aside>
   );

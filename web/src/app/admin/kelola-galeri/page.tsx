@@ -1,22 +1,15 @@
-import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { demoGaleri, PORTFOLIO_NOTICE } from "@/lib/demo-data";
 import { AdminLayout, AdminShell } from "@/components/layout/admin-sidebar";
-import { redirect } from "next/navigation";
 import { GaleriForm } from "./galeri-form";
 
-export const dynamic = "force-dynamic";
-
-export default async function KelolaGaleriPage() {
-  const session = await requireAdmin();
-  if (!session) redirect("/admin/login");
-
-  const galeri = await prisma.galeriMagang.findMany({
-    orderBy: { urutan: "asc" },
-  });
+export default function KelolaGaleriPage() {
+  const galeri = demoGaleri;
 
   return (
     <AdminLayout>
       <AdminShell title="Kelola Galeri" subtitle="Tambah dan kelola foto galeri magang.">
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
+
         <div style={{ display: "grid", gap: 32, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           <div className="status-card">
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Tambah Galeri</h2>

@@ -1,8 +1,0 @@
-export async function tryQuery<T>(query: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await query();
-  } catch (error) {
-    console.error("[db]", error);
-    return fallback;
-  }
-}

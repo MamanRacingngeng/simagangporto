@@ -1,21 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 export function StatusActions({ id, status }: { id: number; status: string }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function updateStatus(newStatus: string, extra?: Record<string, string>) {
+  async function demoAction(label: string) {
     setLoading(true);
-    await fetch(`/api/admin/permohonan/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus, ...extra }),
-    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
     setLoading(false);
-    router.refresh();
+    alert(`${label} — ${PORTFOLIO_NOTICE}`);
   }
 
   return (
@@ -24,7 +19,7 @@ export function StatusActions({ id, status }: { id: number; status: string }) {
         <button
           type="button"
           disabled={loading}
-          onClick={() => updateStatus("Diverifikasi")}
+          onClick={() => demoAction("Verifikasi")}
           className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
         >
           Verifikasi
@@ -35,7 +30,7 @@ export function StatusActions({ id, status }: { id: number; status: string }) {
           <button
             type="button"
             disabled={loading}
-            onClick={() => updateStatus("Diterima")}
+            onClick={() => demoAction("Terima")}
             className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white"
           >
             Terima
@@ -43,10 +38,7 @@ export function StatusActions({ id, status }: { id: number; status: string }) {
           <button
             type="button"
             disabled={loading}
-            onClick={() => {
-              const alasan = prompt("Alasan penolakan:");
-              if (alasan) updateStatus("Ditolak", { alasanPenolakan: alasan });
-            }}
+            onClick={() => demoAction("Tolak")}
             className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white"
           >
             Tolak
@@ -54,10 +46,7 @@ export function StatusActions({ id, status }: { id: number; status: string }) {
           <button
             type="button"
             disabled={loading}
-            onClick={() => {
-              const catatan = prompt("Catatan revisi:");
-              if (catatan) updateStatus("Revisi", { catatanRevisi: catatan });
-            }}
+            onClick={() => demoAction("Minta Revisi")}
             className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
             Minta Revisi

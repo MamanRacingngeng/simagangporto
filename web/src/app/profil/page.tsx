@@ -1,26 +1,14 @@
-import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { demoUser, PORTFOLIO_NOTICE } from "@/lib/demo-data";
 import { DashboardLayout, UserShell } from "@/components/layout/user-sidebar";
-import { redirect } from "next/navigation";
 import { ProfilForm } from "./profil-form";
 
-export const dynamic = "force-dynamic";
-
-export default async function ProfilPage() {
-  const session = await requireUser();
-  if (!session) redirect("/login");
-
-  const user = await prisma.user.findUnique({
-    where: { id: Number(session.user.id) },
-  });
-
-  if (!user) redirect("/login");
-
+export default function ProfilPage() {
   return (
     <DashboardLayout>
       <UserShell title="Profil Saya" subtitle="Lengkapi data diri untuk lamaran magang.">
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
         <div className="status-card">
-          <ProfilForm user={user} />
+          <ProfilForm user={demoUser} />
         </div>
       </UserShell>
     </DashboardLayout>

@@ -1,28 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 export function KuotaForm() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const form = new FormData(e.currentTarget);
-    await fetch("/api/admin/kuota", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        periode: form.get("periode"),
-        posisi: form.get("posisi"),
-        deskripsi: form.get("deskripsi"),
-        kuotaMax: Number(form.get("kuotaMax")),
-      }),
-    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
-    router.refresh();
+    setMessage(PORTFOLIO_NOTICE);
     e.currentTarget.reset();
   }
 
@@ -45,6 +35,7 @@ export function KuotaForm() {
           />
         </div>
       ))}
+      {message && <p className="text-sm text-amber-800">{message}</p>}
       <button
         type="submit"
         disabled={loading}

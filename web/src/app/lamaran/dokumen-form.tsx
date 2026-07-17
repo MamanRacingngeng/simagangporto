@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 type DokumenState = {
   cv: string;
@@ -10,7 +10,6 @@ type DokumenState = {
 };
 
 export function DokumenForm({ initial }: { initial: DokumenState }) {
-  const router = useRouter();
   const [form, setForm] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -18,17 +17,9 @@ export function DokumenForm({ initial }: { initial: DokumenState }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
-
-    const res = await fetch("/api/dokumen", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
-    setMessage(res.ok ? "Dokumen berhasil disimpan." : "Gagal menyimpan dokumen.");
-    if (res.ok) router.refresh();
+    setMessage(PORTFOLIO_NOTICE);
   }
 
   return (
@@ -51,7 +42,7 @@ export function DokumenForm({ initial }: { initial: DokumenState }) {
         </div>
       ))}
       <p className="text-xs text-gray-500">Masukkan link Google Drive atau URL file dokumen.</p>
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && <p className="text-sm text-amber-800">{message}</p>}
       <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Menyimpan..." : "Simpan Dokumen"}
       </button>

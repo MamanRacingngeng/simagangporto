@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 type UserProfile = {
   nama: string;
@@ -19,7 +19,6 @@ type UserProfile = {
 };
 
 export function ProfilForm({ user }: { user: UserProfile }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({
@@ -40,17 +39,9 @@ export function ProfilForm({ user }: { user: UserProfile }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
-
-    const res = await fetch("/api/profil", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
-    setMessage(res.ok ? "Profil berhasil diperbarui." : "Gagal memperbarui profil.");
-    if (res.ok) router.refresh();
+    setMessage(PORTFOLIO_NOTICE);
   }
 
   const fields = [

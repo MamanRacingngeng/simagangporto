@@ -1,80 +1,65 @@
-import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { demoPermohonan, PORTFOLIO_NOTICE } from "@/lib/demo-data";
 import { DashboardLayout, UserShell } from "@/components/layout/user-sidebar";
 import { formatDate } from "@/lib/utils";
-import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function RiwayatLamaranPage() {
-  const session = await requireUser();
-  if (!session) redirect("/login");
-
-  const permohonan = await prisma.permohonanMagang.findMany({
-    where: { userId: Number(session.user.id) },
-    orderBy: { createdAt: "asc" },
-    include: { kuota: { include: { kuota: true } } },
-  });
+export default function RiwayatLamaranPage() {
+  const permohonan = demoPermohonan;
 
   return (
     <DashboardLayout>
       <UserShell title="Riwayat Lamaran" subtitle="Timeline permohonan magang Anda.">
-        {permohonan.length === 0 ? (
-          <p style={{ color: "#6B7280" }}>Belum ada riwayat lamaran.</p>
-        ) : (
-          <div className="status-card">
-            {permohonan.map((item, index) => (
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
+
+        <div className="status-card">
+          {permohonan.map((item, index) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                gap: 16,
+                padding: "16px 0",
+                borderBottom: index < permohonan.length - 1 ? "1px solid #f3f4f6" : undefined,
+              }}
+            >
               <div
-                key={item.id}
                 style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "#2563eb",
+                  color: "#fff",
                   display: "flex",
-                  gap: 16,
-                  padding: "16px 0",
-                  borderBottom: index < permohonan.length - 1 ? "1px solid #f3f4f6" : undefined,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  flexShrink: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    background: "#2563eb",
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    flexShrink: 0,
-                  }}
-                >
-                  {index + 1}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <p style={{ fontWeight: 600 }}>
-                      {item.kuota[0]?.kuota.posisi ?? item.posisiBackup}
-                    </p>
-                    <span
-                      style={{
-                        background: "#fef3c7",
-                        color: "#92400e",
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {item.status}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
-                    {formatDate(item.tanggalPengajuan)}
-                  </p>
-                </div>
+                {index + 1}
               </div>
-            ))}
-          </div>
-        )}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <p style={{ fontWeight: 600 }}>{item.posisi}</p>
+                  <span
+                    style={{
+                      background: "#fef3c7",
+                      color: "#92400e",
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+                <p style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
+                  {formatDate(item.tanggalPengajuan)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </UserShell>
     </DashboardLayout>
   );

@@ -1,42 +1,23 @@
-import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import {
+  demoDokumen,
+  demoJadwal,
+  demoKuota,
+  demoPermohonan,
+  PORTFOLIO_NOTICE,
+} from "@/lib/demo-data";
 import { DashboardLayout, UserShell } from "@/components/layout/user-sidebar";
-import { redirect } from "next/navigation";
 import { AjukanForm } from "./ajukan-form";
 
-export const dynamic = "force-dynamic";
-
-export default async function LowonganPage() {
-  const session = await requireUser();
-  if (!session) redirect("/login");
-
-  const userId = Number(session.user.id);
-  const [kuota, dokumen, permohonanAktif, jadwal] = await Promise.all([
-    prisma.kuotaMagang.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.dokumen.findUnique({ where: { userId } }),
-    prisma.permohonanMagang.findFirst({
-      where: { userId, status: { notIn: ["Diterima", "Ditolak"] } },
-    }),
-    prisma.jadwalMagang.findMany(),
-  ]);
+export default function LowonganPage() {
+  const kuota = demoKuota;
+  const dokumen = demoDokumen;
+  const permohonanAktif = demoPermohonan.find((p) => !["Diterima", "Ditolak"].includes(p.status));
+  const jadwal = demoJadwal;
 
   return (
     <DashboardLayout>
       <UserShell title="Lowongan Magang" subtitle="Pilih posisi magang yang tersedia.">
-        {!dokumen?.cv && (
-          <div
-            className="status-card"
-            style={{ background: "#fffbeb", borderLeft: "4px solid #fbbf24", marginBottom: 20 }}
-          >
-            <p style={{ fontSize: 14, color: "#92400e" }}>
-              Lengkapi dokumen di halaman{" "}
-              <a href="/lamaran" style={{ fontWeight: 600, color: "#b45309" }}>
-                Lamaran
-              </a>{" "}
-              sebelum mengajukan.
-            </p>
-          </div>
-        )}
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
 
         <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
           {kuota.map((item) => {

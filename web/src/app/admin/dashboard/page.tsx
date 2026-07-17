@@ -1,26 +1,13 @@
-import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import {
+  demoAdminMetrics,
+  demoAdminPermohonan,
+  PORTFOLIO_NOTICE,
+} from "@/lib/demo-data";
 import { AdminLayout, AdminShell } from "@/components/layout/admin-sidebar";
-import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function AdminDashboardPage() {
-  const session = await requireAdmin();
-  if (!session) redirect("/admin/login");
-
-  const [totalUser, totalPermohonan, diterima, kuota] = await Promise.all([
-    prisma.user.count({ where: { role: "user" } }),
-    prisma.permohonanMagang.count(),
-    prisma.permohonanMagang.count({ where: { status: "Diterima" } }),
-    prisma.kuotaMagang.count(),
-  ]);
-
-  const recent = await prisma.permohonanMagang.findMany({
-    take: 5,
-    orderBy: { createdAt: "desc" },
-    include: { user: true, kuota: { include: { kuota: true } } },
-  });
+export default function AdminDashboardPage() {
+  const { totalUser, totalPermohonan, diterima, kuota } = demoAdminMetrics;
+  const recent = demoAdminPermohonan;
 
   const metrics = [
     { label: "Total Pendaftar", value: totalUser },
@@ -32,6 +19,8 @@ export default async function AdminDashboardPage() {
   return (
     <AdminLayout>
       <AdminShell title="Dashboard Admin" subtitle="Ringkasan program magang BBKB.">
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
+
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" style={{ marginBottom: 32 }}>
           {metrics.map((m) => (
             <div key={m.label} className="admin-card">
@@ -56,9 +45,7 @@ export default async function AdminDashboardPage() {
                 {recent.map((item) => (
                   <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                     <td style={{ padding: "14px 16px 14px 0", fontWeight: 500 }}>{item.user.nama}</td>
-                    <td style={{ padding: "14px 16px 14px 0", color: "#6b7280" }}>
-                      {item.kuota[0]?.kuota.posisi ?? item.posisiBackup}
-                    </td>
+                    <td style={{ padding: "14px 16px 14px 0", color: "#6b7280" }}>{item.posisi}</td>
                     <td style={{ padding: "14px 0" }}>
                       <span
                         style={{

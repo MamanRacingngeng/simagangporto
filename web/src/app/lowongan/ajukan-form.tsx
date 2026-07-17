@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 export function AjukanForm({
   kuotaId,
@@ -15,17 +16,10 @@ export function AjukanForm({
 
   async function handleSubmit() {
     setLoading(true);
-    const res = await fetch("/api/permohonan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kuotaId }),
-    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
-
-    if (res.ok) {
-      router.push("/lamaran");
-      router.refresh();
-    }
+    alert(PORTFOLIO_NOTICE);
+    router.push("/lamaran");
   }
 
   return (

@@ -1,23 +1,16 @@
-import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { demoJadwal, PORTFOLIO_NOTICE } from "@/lib/demo-data";
 import { AdminLayout, AdminShell } from "@/components/layout/admin-sidebar";
 import { formatDate } from "@/lib/utils";
-import { redirect } from "next/navigation";
 import { JadwalForm } from "./jadwal-form";
 
-export const dynamic = "force-dynamic";
-
-export default async function AturJadwalPage() {
-  const session = await requireAdmin();
-  if (!session) redirect("/admin/login");
-
-  const jadwal = await prisma.jadwalMagang.findMany({
-    orderBy: { tglMulai: "desc" },
-  });
+export default function AturJadwalPage() {
+  const jadwal = demoJadwal;
 
   return (
     <AdminLayout>
       <AdminShell title="Atur Jadwal Magang" subtitle="Kelola jadwal mulai dan selesai magang.">
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">{PORTFOLIO_NOTICE}</p>
+
         <div style={{ display: "grid", gap: 32, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           <div className="status-card">
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Tambah Jadwal</h2>

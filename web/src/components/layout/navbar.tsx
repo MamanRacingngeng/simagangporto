@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { getSessionSafe } from "@/lib/auth";
+import { demoUser } from "@/lib/demo-data";
 import { NavbarLogos } from "./navbar-logos";
 
-export async function Navbar() {
-  const session = await getSessionSafe();
-
+export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
       <div
@@ -23,24 +21,23 @@ export async function Navbar() {
           <li><Link href="/galeri-magang" className="nav-link text-gray-700">Galeri Magang</Link></li>
         </ul>
 
-        {session?.user ? (
+        <div className="flex items-center gap-2">
           <Link
-            href={session.user.role === "admin" ? "/admin/dashboard" : "/dashboard"}
-            className="user-profile-btn flex items-center gap-3 rounded-lg px-4 py-2 font-semibold shadow-sm"
+            href="/dashboard"
+            className="user-profile-btn hidden items-center gap-3 rounded-lg px-4 py-2 font-semibold shadow-sm sm:flex"
           >
             <div className="user-profile-img relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-100 text-sm font-bold text-gray-700 shadow-sm">
-              {session.user.nama?.charAt(0).toUpperCase() ?? "U"}
+              {demoUser.nama.charAt(0)}
             </div>
             <div className="relative z-10 hidden flex-col items-start md:flex">
-              <span className="text-sm font-bold leading-tight text-gray-900">{session.user.nama}</span>
-              <span className="text-xs font-medium leading-tight text-gray-600">{session.user.email}</span>
+              <span className="text-sm font-bold leading-tight text-gray-900">{demoUser.nama}</span>
+              <span className="text-xs font-medium leading-tight text-gray-600">Demo Portfolio</span>
             </div>
           </Link>
-        ) : (
-          <Link href="/login" className="user-profile-btn rounded-lg px-4 py-2 font-semibold shadow-sm">
-            <span className="relative z-10 text-gray-900">Login / Daftar</span>
+          <Link href="/admin/dashboard" className="hidden rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 md:inline-block">
+            Admin Demo
           </Link>
-        )}
+        </div>
       </div>
     </nav>
   );

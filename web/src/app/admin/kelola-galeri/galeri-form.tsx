@@ -1,28 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PORTFOLIO_NOTICE } from "@/lib/demo-data";
 
 export function GaleriForm() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const form = new FormData(e.currentTarget);
-    await fetch("/api/admin/galeri", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        judul: form.get("judul"),
-        deskripsi: form.get("deskripsi"),
-        foto: form.get("foto"),
-        urutan: Number(form.get("urutan") || 0),
-      }),
-    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
-    router.refresh();
+    setMessage(PORTFOLIO_NOTICE);
     e.currentTarget.reset();
   }
 
@@ -32,6 +22,7 @@ export function GaleriForm() {
       <textarea name="deskripsi" placeholder="Deskripsi" className="auth-input" rows={3} />
       <input name="foto" placeholder="URL foto" className="auth-input" />
       <input name="urutan" type="number" placeholder="Urutan" className="auth-input" />
+      {message && <p className="text-sm text-amber-800">{message}</p>}
       <button type="submit" disabled={loading} className="btn-primary" style={{ width: "auto", marginTop: 8 }}>
         {loading ? "Menyimpan..." : "Simpan Galeri"}
       </button>

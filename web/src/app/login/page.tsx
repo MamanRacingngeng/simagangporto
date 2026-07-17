@@ -1,7 +1,5 @@
-import { redirectIfAuthenticated } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
-  await redirectIfAuthenticated();
+export default function LoginPage() {
   return <LoginForm />;
 }
