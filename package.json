@@ -1,0 +1,19 @@
+{
+  "name": "simagangporto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SIMAGANG Portal Magang BBKB — Next.js app in web/",
+  "scripts": {
+    "build": "npm run build --prefix web",
+    "dev": "npm run dev --prefix web",
+    "start": "npm run start --prefix web"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  }
+}
