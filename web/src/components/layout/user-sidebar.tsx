@@ -63,23 +63,13 @@ export function UserSidebar() {
       <div className="brand">
         <div style={{ padding: "28px 20px" }}>
           <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                margin: "0 auto 14px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 24,
-              }}
-            >
-              BBKB
-            </div>
+            <img
+              src="/images/logoBBKB.png"
+              alt="Logo BBKB"
+              width={200}
+              height={92}
+              style={{ height: 56, width: "auto", margin: "0 auto 14px", display: "block", objectFit: "contain" }}
+            />
             <div
               style={{
                 fontSize: 20,

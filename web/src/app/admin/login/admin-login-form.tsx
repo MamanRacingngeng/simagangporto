@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { NavbarLogos } from "@/components/layout/navbar-logos";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -20,6 +21,9 @@ export function AdminLoginForm() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="mb-6 text-center">
+          <div className="mb-4 flex justify-center">
+            <NavbarLogos />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Login Admin</h1>
           <p className="mt-2 text-sm text-gray-600">Panel administrasi SIMAGANG — Demo Portfolio</p>
         </div>

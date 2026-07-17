@@ -1,8 +1,21 @@
 # SIMAGANG — Portal Magang BBKB
 
-Aplikasi aktif ada di folder **`web/`** (Next.js), siap deploy ke **Vercel**.
+<p align="center">
+  <img src="web/public/images/logoBBKB.png" alt="Logo BBKB" height="52" />
+  &nbsp;&nbsp;
+  <img src="web/public/images/logokemenperi.png" alt="Logo Kemenperin" height="52" />
+</p>
 
-Versi Laravel lama diarsipkan di **`archive/laravel/`** — bisa dipulihkan kapan saja.
+<p align="center">
+  <strong>SIMAGANG</strong> — Sistem Informasi Magang Digital BBKB Yogyakarta<br/>
+  <em>Portfolio demo · Next.js</em>
+</p>
+
+<p align="center">
+  <a href="https://simagangporto.vercel.app">🌐 Live Demo</a>
+</p>
+
+Aplikasi aktif ada di folder **`web/`** (Next.js), deploy ke **Vercel** sebagai portfolio demo.
 
 ## Struktur Repo
 

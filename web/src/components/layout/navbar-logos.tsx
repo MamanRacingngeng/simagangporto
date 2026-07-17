@@ -6,16 +6,16 @@ export function NavbarLogos() {
       <img
         src="/images/logoBBKB.png"
         alt="Logo BBKB"
-        width={330}
-        height={90}
+        width={240}
+        height={110}
         className="h-12 max-h-12 w-auto object-contain transition-transform duration-300 hover:scale-110"
         decoding="async"
       />
       <img
         src="/images/logokemenperi.png"
         alt="Logo Kemenperin"
-        width={275}
-        height={183}
+        width={177}
+        height={110}
         className="h-14 max-h-14 w-auto object-contain transition-transform duration-300 hover:scale-110"
         decoding="async"
       />
