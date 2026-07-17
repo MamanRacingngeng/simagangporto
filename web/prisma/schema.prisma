@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum NotifikasiTipe {
+  info
+  warning
+  error
+  success
+  revisi
+}
+
+model User {
+  id                      Int       @id @default(autoincrement())
+  nama                    String
+  namaPanggilan           String?   @map("nama_panggilan")
+  email                   String    @unique
+  emailVerifiedAt         DateTime? @map("email_verified_at")
+  password                String?
+  role                    Role      @default(user)
+  isActive                Boolean   @default(false) @map("is_active")
+  googleId                String?   @unique @map("google_id")
+  avatar                  String?
+  emailVerificationToken  String?   @map("email_verification_token")
+  ttl                     String?
+  domisili                String?
+  nim                     String?
+  semester                Int?
+  ipk                     Float?
+  program                 String?
+  universitas             String?
+  softwareTools           String?   @map("software_tools")
+  portofolio              String?
+  kompetensiUtama         String?   @map("kompetensi_utama")
+  fotoProfil              String?   @map("foto_profil")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  dokumen       Dokumen?
+  permohonan    PermohonanMagang[]
+  notifikasi    Notifikasi[]
+  adminNotif    Notifikasi[] @relation("AdminNotifikasi")
+
+  @@map("users")
+}
+
+model Dokumen {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique @map("user_id")
+  cv              String?
+  suratPengantar  String?  @map("surat_pengantar")
+  proposal        String?
+  tanggalUpload   DateTime @map("tanggal_upload")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permohonan PermohonanMagang[]
+
+  @@map("dokumen")
+}
+
+model PermohonanMagang {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  dokumenId        Int?     @map("dokumen_id")
+  tanggalPengajuan DateTime @map("tanggal_pengajuan")
+  status           String   @default("Diajukan")
+  alasanPenolakan  String?  @map("alasan_penolakan")
+  catatanRevisi    String?  @map("catatan_revisi")
+  suratKerja       String?  @map("surat_kerja")
+  periodeBackup    String?  @map("periode_backup")
+  posisiBackup     String?  @map("posisi_backup")
+  tglMulaiBackup   DateTime? @map("tgl_mulai_backup")
+  tglSelesaiBackup DateTime? @map("tgl_selesai_backup")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dokumen      Dokumen?       @relation(fields: [dokumenId], references: [id], onDelete: SetNull)
+  kuota        PermohonanKuota[]
+  notifikasi   Notifikasi[]
+
+  @@map("permohonan_magang")
+}
+
+model KuotaMagang {
+  id            Int      @id @default(autoincrement())
+  periode       String
+  posisi        String
+  deskripsi     String?
+  kuotaMax      Int      @map("kuota_max")
+  kuotaTerpakai Int      @default(0) @map("kuota_terpakai")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  permohonan PermohonanKuota[]
+
+  @@unique([periode, posisi])
+  @@map("kuota_magang")
+}
+
+model JadwalMagang {
+  id         Int      @id @default(autoincrement())
+  periode    String
+  posisi     String
+  tglMulai   DateTime @map("tgl_mulai")
+  tglSelesai DateTime @map("tgl_selesai")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([periode, posisi])
+  @@map("jadwal_magang")
+}
+
+model PermohonanKuota {
+  permohonanMagangId Int @map("permohonan_magang_id")
+  kuotaMagangId      Int @map("kuota_magang_id")
+
+  permohonan PermohonanMagang @relation(fields: [permohonanMagangId], references: [id], onDelete: Cascade)
+  kuota      KuotaMagang      @relation(fields: [kuotaMagangId], references: [id], onDelete: Cascade)
+
+  @@id([permohonanMagangId, kuotaMagangId])
+  @@map("permohonan_kuota")
+}
+
+model GaleriMagang {
+  id        Int      @id @default(autoincrement())
+  judul     String
+  deskripsi String?
+  foto      String
+  aktif     Boolean  @default(true)
+  urutan    Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("galeri_magang")
+}
+
+model Notifikasi {
+  id                 Int             @id @default(autoincrement())
+  userId             Int             @map("user_id")
+  permohonanMagangId Int?            @map("permohonan_magang_id")
+  adminId            Int?            @map("admin_id")
+  judul              String
+  pesan              String
+  tipe               NotifikasiTipe  @default(info)
+  dibaca             Boolean         @default(false)
+  dibacaAt           DateTime?       @map("dibaca_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permohonan PermohonanMagang? @relation(fields: [permohonanMagangId], references: [id], onDelete: Cascade)
+  admin      User?             @relation("AdminNotifikasi", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([dibaca])
+  @@map("notifikasi")
+}
